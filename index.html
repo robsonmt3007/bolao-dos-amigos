@@ -24,12 +24,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
 
     <!-- CABEÇALHO -->
-    <header class="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50 px-4 py-3">
+    <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 px-4 py-3">
         <div class="max-w-xl mx-auto flex justify-between items-center">
             <div class="flex items-center gap-2.5">
                 <div class="bg-emerald-600/20 border border-emerald-500/30 p-2 rounded-xl text-emerald-400">
@@ -37,28 +39,25 @@
                 </div>
                 <div>
                     <h1 class="font-extrabold text-base tracking-wide bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">BOLÃO DOS AMIGOS</h1>
-                    <p class="text-[10px] text-slate-400 font-medium">Temporada Oficial • 1 Pt por Acerto</p>
+                    <p class="text-[10px] text-slate-400 font-medium">1 Ponto por Acerto • Vencedor ou Empate</p>
                 </div>
             </div>
 
-            <!-- SELETOR DE USUÁRIO / PARTICIPANTE -->
+            <!-- SELETOR DE USUÁRIO -->
             <div class="flex items-center gap-2">
-                <div class="text-right hidden sm:block">
-                    <span class="text-[10px] text-slate-400 block">Participando como:</span>
-                </div>
-                <select id="select-usuario" onchange="mudarUsuarioAtivo(this.value)" class="bg-slate-800 border border-slate-700 text-xs font-semibold text-emerald-400 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500">
-                    <!-- Preenchido via JS -->
+                <span class="text-[10px] text-slate-400 hidden sm:inline">Você é:</span>
+                <select id="select-usuario" onchange="mudarUsuarioAtivo(this.value)" class="bg-slate-800 border border-slate-700 text-xs font-bold text-emerald-400 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500">
                 </select>
             </div>
         </div>
     </header>
 
     <!-- CONTEÚDO PRINCIPAL -->
-    <main class="max-w-xl w-full mx-auto p-4 flex-grow pb-24">
+    <main class="max-w-xl w-full mx-auto p-4 flex-grow pb-20">
 
         <!-- ABAS DE NAVEGAÇÃO -->
-        <div class="grid grid-cols-4 gap-1 bg-slate-900/90 border border-slate-800 p-1 rounded-xl mb-5 text-center text-xs font-semibold">
-            <button onclick="mudarAba('palpites')" id="tab-btn-palpites" class="py-2.5 rounded-lg transition flex flex-col items-center gap-1 bg-emerald-600 text-white shadow-lg shadow-emerald-900/20">
+        <div class="grid grid-cols-4 gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl mb-5 text-center text-xs font-semibold">
+            <button onclick="mudarAba('palpites')" id="tab-btn-palpites" class="py-2.5 rounded-lg transition flex flex-col items-center gap-1 bg-emerald-600 text-white shadow-lg">
                 <i class="fa-solid fa-pen-to-square"></i> Palpites
             </button>
             <button onclick="mudarAba('ranking')" id="tab-btn-ranking" class="py-2.5 rounded-lg transition flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
@@ -74,38 +73,34 @@
 
         <!-- ABA 1: PALPITES -->
         <div id="tab-palpites" class="space-y-4">
-            <!-- Pote Acumulado & Info -->
+            <!-- Pote Acumulado -->
             <div class="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-emerald-500/20 rounded-2xl p-4 shadow-xl flex items-center justify-between">
                 <div>
-                    <span class="text-[10px] uppercase font-bold tracking-wider text-emerald-400 block mb-0.5">Pote da Rodada</span>
-                    <h2 class="text-2xl font-black text-white" id="info-pote">R$ 150,00</h2>
-                    <p class="text-[11px] text-slate-400">15 participantes confirmados</p>
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-emerald-400 block mb-0.5">Pote Acumulado</span>
+                    <h2 class="text-2xl font-black text-white" id="info-pote">R$ 50,00</h2>
+                    <p class="text-[11px] text-slate-400" id="info-qtd-amigos">5 participantes (R$ 10,00 cada)</p>
                 </div>
-                <div class="text-right">
-                    <button onclick="abrirModalImportar()" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1.5 shadow">
-                        <i class="fa-brands fa-whatsapp text-emerald-400 text-sm"></i> Importar do Zap
-                    </button>
-                </div>
+                <button onclick="abrirModalImportar()" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 text-xs font-bold px-3 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow">
+                    <i class="fa-brands fa-whatsapp text-sm"></i> Importar Zap
+                </button>
             </div>
 
             <!-- Filtros de Competição -->
-            <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
-                <button onclick="filtrarCompeticao('todos')" class="filtro-comp px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-semibold whitespace-nowrap transition">Todos</button>
-                <button onclick="filtrarCompeticao('Champions League')" class="filtro-comp px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap transition">Champions</button>
-                <button onclick="filtrarCompeticao('Libertadores')" class="filtro-comp px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap transition">Libertadores</button>
-                <button onclick="filtrarCompeticao('Brasileirão')" class="filtro-comp px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap transition">Brasileirão</button>
-                <button onclick="filtrarCompeticao('Premier League')" class="filtro-comp px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap transition">Premier League</button>
+            <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar" id="container-filtros">
+                <button onclick="filtrarCompeticao('todos', this)" class="filtro-comp px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-semibold whitespace-nowrap transition">Todos</button>
+                <button onclick="filtrarCompeticao('Champions League', this)" class="filtro-comp px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap transition">Champions</button>
+                <button onclick="filtrarCompeticao('Libertadores', this)" class="filtro-comp px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap transition">Libertadores</button>
+                <button onclick="filtrarCompeticao('Brasileirão', this)" class="filtro-comp px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap transition">Brasileirão</button>
+                <button onclick="filtrarCompeticao('Premier League', this)" class="filtro-comp px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap transition">Premier League</button>
             </div>
 
             <!-- Lista de Partidas -->
-            <div id="lista-partidas-palpites" class="space-y-3">
-                <!-- Inserido dinamicamente via JS -->
-            </div>
+            <div id="lista-partidas-palpites" class="space-y-3"></div>
 
-            <!-- Ação de Enviar Comprovante -->
+            <!-- Botão Enviar WhatsApp -->
             <div class="pt-2">
                 <button onclick="gerarComprovanteWhatsApp()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 px-4 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/30">
-                    <i class="fa-brands fa-whatsapp text-lg"></i> Gerar Comprovante para o WhatsApp
+                    <i class="fa-brands fa-whatsapp text-lg"></i> Enviar Meu Palpite no WhatsApp
                 </button>
             </div>
         </div>
@@ -115,9 +110,9 @@
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
                 <div class="flex justify-between items-center mb-3">
                     <h2 class="text-sm font-bold text-white flex items-center gap-2">
-                        <i class="fa-solid fa-ranking-star text-emerald-400"></i> Tabela de Classificação
+                        <i class="fa-solid fa-ranking-star text-emerald-400"></i> Classificação Oficial
                     </h2>
-                    <select id="filtro-ranking-comp" onchange="atualizarRanking()" class="bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded-lg px-2 py-1">
+                    <select id="filtro-ranking-comp" onchange="atualizarRanking()" class="bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded-lg px-2 py-1 focus:outline-none">
                         <option value="todos">Geral (Todos)</option>
                         <option value="Champions League">Champions League</option>
                         <option value="Libertadores">Libertadores</option>
@@ -126,7 +121,6 @@
                     </select>
                 </div>
 
-                <!-- Tabela -->
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs">
                         <thead>
@@ -138,9 +132,7 @@
                                 <th class="py-2.5 px-2 text-right">Pts</th>
                             </tr>
                         </thead>
-                        <tbody id="tabela-ranking-corpo" class="divide-y divide-slate-800/60 font-medium">
-                            <!-- Preenchido via JS -->
-                        </tbody>
+                        <tbody id="tabela-ranking-corpo" class="divide-y divide-slate-800/60 font-medium"></tbody>
                     </table>
                 </div>
             </div>
@@ -157,8 +149,8 @@
                     <div class="flex items-start gap-2.5 bg-slate-800/50 p-3 rounded-xl border border-slate-800">
                         <div class="bg-emerald-600/20 text-emerald-400 p-1.5 rounded-lg mt-0.5"><i class="fa-solid fa-check"></i></div>
                         <div>
-                            <strong class="text-white block mb-0.5">Regra Única de Pontuação (1 Ponto)</strong>
-                            Acertou quem venceu a partida ou acertou que deu empate (independentemente de quantos gols foram marcados), você fatura <strong>1 ponto</strong>. Errou o vencedor/empate, pontuação 0.
+                            <strong class="text-white block mb-0.5">Regra Única (1 Ponto por Acerto)</strong>
+                            Acertou quem venceu a partida ou acertou que deu empate — independentemente do placar exato — você ganha <strong>1 ponto</strong>. Errou o resultado, marca 0 pontos.
                         </div>
                     </div>
 
@@ -166,7 +158,7 @@
                         <div class="bg-emerald-600/20 text-emerald-400 p-1.5 rounded-lg mt-0.5"><i class="fa-solid fa-clock"></i></div>
                         <div>
                             <strong class="text-white block mb-0.5">Prazo de Envio</strong>
-                            Os palpites devem ser salvos e enviados no grupo até 10 minutos antes do apito inicial de cada partida.
+                            Os palpites devem ser enviados no grupo até 10 minutos antes do início de cada partida.
                         </div>
                     </div>
 
@@ -174,7 +166,7 @@
                         <div class="bg-emerald-600/20 text-emerald-400 p-1.5 rounded-lg mt-0.5"><i class="fa-solid fa-scale-balanced"></i></div>
                         <div>
                             <strong class="text-white block mb-0.5">Critérios de Desempate</strong>
-                            1. Maior número de acertos totais.<br>2. Maior aproveitamento percentual.<br>3. Ordem cronológica de envio do palpite.
+                            1. Maior número de acertos totais.<br>2. Maior aproveitamento percentual.<br>3. Ordem de envio do comprovante no WhatsApp.
                         </div>
                     </div>
                 </div>
@@ -182,7 +174,7 @@
                 <!-- Chave Pix -->
                 <div class="border-t border-slate-800 pt-4 mt-2">
                     <h3 class="text-xs font-bold text-white mb-2 flex items-center gap-1.5">
-                        <i class="fa-solid fa-pix text-emerald-400"></i> Pagamento da Inscrição / Pote
+                        <i class="fa-solid fa-pix text-emerald-400"></i> Pagamento da Inscrição (R$ 10,00)
                     </h3>
                     <div class="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700/60 flex items-center justify-between">
                         <div>
@@ -199,29 +191,52 @@
 
         <!-- ABA 4: ADMIN -->
         <div id="tab-admin" class="space-y-4 hidden">
+            <!-- Lançar Resultados -->
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
                 <h2 class="text-sm font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-screwdriver-wrench text-emerald-400"></i> Painel do Administrador
+                    <i class="fa-solid fa-whistle text-emerald-400"></i> Lançar Placares Oficiais
                 </h2>
-                <p class="text-xs text-slate-400">Lance os resultados oficiais das partidas para recalcular automaticamente os pontos e o ranking.</p>
+                <p class="text-xs text-slate-400">Preencha o resultado real após o fim do jogo e clique em Salvar para atualizar o ranking.</p>
+                <div id="lista-admin-partidas" class="space-y-2.5"></div>
+            </div>
 
-                <!-- Gestão de Resultados -->
-                <div class="space-y-3 pt-2">
-                    <h3 class="text-xs font-bold text-slate-200 border-b border-slate-800 pb-1">Lançar Placar Oficial</h3>
-                    <div id="lista-admin-partidas" class="space-y-2.5">
-                        <!-- Preenchido via JS -->
-                    </div>
+            <!-- Cadastrar Novo Jogo -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+                <h3 class="text-xs font-bold text-white flex items-center gap-1.5">
+                    <i class="fa-solid fa-plus-circle text-emerald-400"></i> Adicionar Nova Partida
+                </h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" id="novo-time-casa" placeholder="Time da Casa (ex: Flamengo)" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500">
+                    <input type="text" id="novo-time-visitante" placeholder="Visitante (ex: Vasco)" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500">
                 </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <select id="novo-campeonato" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500">
+                        <option value="Champions League">Champions League</option>
+                        <option value="Libertadores">Libertadores</option>
+                        <option value="Brasileirão">Brasileirão</option>
+                        <option value="Premier League">Premier League</option>
+                    </select>
+                    <input type="text" id="nova-data-jogo" placeholder="Data/Hora (ex: 25/11 • 21:30)" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500">
+                </div>
+                <button onclick="adicionarNovaPartida()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 rounded-xl transition shadow">
+                    Cadastrar Partida na Rodada
+                </button>
+            </div>
 
-                <!-- Gestão de Participantes -->
-                <div class="border-t border-slate-800 pt-4 mt-4 space-y-3">
-                    <h3 class="text-xs font-bold text-slate-200">Adicionar Novo Participante</h3>
-                    <div class="flex gap-2">
-                        <input type="text" id="input-novo-amigo" placeholder="Nome do participante..." class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 flex-grow text-white focus:outline-none focus:border-emerald-500">
-                        <button onclick="adicionarAmigo()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow">
-                            Adicionar
-                        </button>
-                    </div>
+            <!-- Adicionar Participante -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+                <h3 class="text-xs font-bold text-white flex items-center gap-1.5">
+                    <i class="fa-solid fa-user-plus text-emerald-400"></i> Adicionar Participante
+                </h3>
+                <div class="flex gap-2">
+                    <input type="text" id="input-novo-amigo" placeholder="Nome do amigo..." class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 flex-grow text-white focus:outline-none focus:border-emerald-500">
+                    <button onclick="adicionarAmigo()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow">
+                        Adicionar
+                    </button>
+                </div>
+                <div class="pt-2 border-t border-slate-800 flex justify-between items-center">
+                    <span class="text-[11px] text-slate-500">Resetar dados de fábrica:</span>
+                    <button onclick="resetarTudo()" class="text-[11px] text-red-400 hover:underline font-semibold">Limpar Tudo</button>
                 </div>
             </div>
         </div>
@@ -237,24 +252,60 @@
                 </h3>
                 <button onclick="fecharModalImportar()" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <p class="text-xs text-slate-400 leading-relaxed">Cole abaixo o texto completo do comprovante que seu amigo mandou no grupo do WhatsApp:</p>
-            <textarea id="textarea-whatsapp" rows="5" placeholder="Ex: 🏆 BOLÃO DOS AMIGOS&#10;👤 Participante: João&#10;⚽ Real Madrid 2 x 1 Barcelona..." class="w-full bg-slate-800 border border-slate-700 text-xs text-slate-200 rounded-xl p-3 focus:outline-none focus:border-emerald-500"></textarea>
+            <p class="text-xs text-slate-400 leading-relaxed">Cole abaixo a mensagem do comprovante enviada no grupo:</p>
+            <textarea id="textarea-whatsapp" rows="5" placeholder="Cole aqui a mensagem recebida no WhatsApp..." class="w-full bg-slate-800 border border-slate-700 text-xs text-slate-200 rounded-xl p-3 focus:outline-none focus:border-emerald-500"></textarea>
             <div class="flex justify-end gap-2 pt-2">
                 <button onclick="fecharModalImportar()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold px-4 py-2 rounded-xl transition">Cancelar</button>
-                <button onclick="processarImportacaoWhatsApp()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow">Processar Palpite</button>
+                <button onclick="processarImportacaoWhatsApp()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow">Importar Agora</button>
             </div>
         </div>
     </div>
 
     <!-- RODAPÉ -->
     <footer class="bg-slate-900/60 border-t border-slate-800/80 py-3 text-center text-[10px] text-slate-500">
-        Bolão dos Amigos • Regra de 1 Ponto por Acerto de Vencedor/Empate
+        Bolão dos Amigos • 1 Ponto por Acerto de Vencedor ou Empate
     </footer>
 
-    <!-- BANCO DE DADOS LOCAL E LÓGICA -->
+    <!-- JAVASCRIPT DO APLICATIVO -->
     <script>
-        // Dados Iniciais do Aplicativo
-        let dadosApp = {
+        const ESCUDO_PADRAO = "https://cdn-icons-png.flaticon.com/512/53/53283.png";
+
+        // Banco de escudos conhecidos para cadastro rápido
+        const MAPA_ESCUDOS = {
+            "real madrid": "https://crests.football-data.org/86.png",
+            "barcelona": "https://crests.football-data.org/81.png",
+            "manchester city": "https://crests.football-data.org/65.png",
+            "liverpool": "https://crests.football-data.org/64.png",
+            "arsenal": "https://crests.football-data.org/57.png",
+            "chelsea": "https://crests.football-data.org/61.png",
+            "bayern": "https://crests.football-data.org/5.png",
+            "bayern de munique": "https://crests.football-data.org/5.png",
+            "borussia dortmund": "https://crests.football-data.org/4.png",
+            "psg": "https://crests.football-data.org/524.png",
+            "inter de milão": "https://crests.football-data.org/108.png",
+            "milan": "https://crests.football-data.org/98.png",
+            "flamengo": "https://crests.football-data.org/1783.png",
+            "palmeiras": "https://crests.football-data.org/1776.png",
+            "botafogo": "https://crests.football-data.org/1770.png",
+            "são paulo": "https://crests.football-data.org/1777.png",
+            "corinthians": "https://crests.football-data.org/1779.png",
+            "fluminense": "https://crests.football-data.org/1765.png",
+            "atlético-mg": "https://crests.football-data.org/1766.png",
+            "cruzeiro": "https://crests.football-data.org/1771.png",
+            "grêmio": "https://crests.football-data.org/1767.png",
+            "internacional": "https://crests.football-data.org/1768.png",
+            "fortaleza": "https://crests.football-data.org/3984.png",
+            "ceará": "https://crests.football-data.org/1837.png",
+            "river plate": "https://crests.football-data.org/1876.png",
+            "boca juniors": "https://crests.football-data.org/1877.png"
+        };
+
+        function obterEscudo(nomeTime) {
+            const chave = nomeTime.trim().toLowerCase();
+            return MAPA_ESCUDOS[chave] || ESCUDO_PADRAO;
+        }
+
+        const DADOS_INICIAIS = {
             usuarioAtivo: "Robson",
             amigos: ["Robson", "João Victor", "Rita Andrade", "Carlos Silva", "Marcos Vinicius"],
             competicaoFiltro: "todos",
@@ -262,44 +313,55 @@
                 { id: 1, casa: "Real Madrid", escudoCasa: "https://crests.football-data.org/86.png", visitante: "Barcelona", escudoVisitante: "https://crests.football-data.org/81.png", campeonato: "Champions League", data: "19/11 • 17:00", placarOficialCasa: null, placarOficialVisitante: null },
                 { id: 2, casa: "Manchester City", escudoCasa: "https://crests.football-data.org/65.png", visitante: "Liverpool", escudoVisitante: "https://crests.football-data.org/64.png", campeonato: "Premier League", data: "20/11 • 15:30", placarOficialCasa: null, placarOficialVisitante: null },
                 { id: 3, casa: "Flamengo", escudoCasa: "https://crests.football-data.org/1783.png", visitante: "Palmeiras", escudoVisitante: "https://crests.football-data.org/1776.png", campeonato: "Libertadores", data: "21/11 • 21:30", placarOficialCasa: null, placarOficialVisitante: null },
-                { id: 4, casa: "Bayern de Munique", escudoCasa: "https://crests.football-data.org/5.png", visitante: "Borussia Dortmund", escudoVisitante: "https://crests.football-data.org/4.png", campeonato: "Champions League", data: "22/11 • 17:00", placarOficialCasa: null, placarOficialVisitante: null }
+                { id: 4, casa: "Fortaleza", escudoCasa: "https://crests.football-data.org/3984.png", visitante: "Botafogo", escudoVisitante: "https://crests.football-data.org/1770.png", campeonato: "Brasileirão", data: "22/11 • 19:00", placarOficialCasa: null, placarOficialVisitante: null }
             ],
-            // palpites[usuario][partidoId] = { casa: X, visitante: Y }
             palpites: {
-                "Robson": { 1: { casa: 2, visitante: 1 }, 2: { casa: 1, visitante: 1 }, 3: { casa: 2, visitante: 0 }, 4: { casa: 3, visitante: 2 } },
-                "João Victor": { 1: { casa: 1, visitante: 1 }, 2: { casa: 2, visitante: 1 }, 3: { casa: 1, visitante: 1 }, 4: { casa: 2, visitante: 1 } },
-                "Rita Andrade": { 1: { casa: 2, visitante: 2 }, 2: { casa: 0, visitante: 2 }, 3: { casa: 2, visitante: 1 }, 4: { casa: 1, visitante: 0 } }
+                "Robson": { 1: { casa: 2, visitante: 1 }, 2: { casa: 1, visitante: 1 }, 3: { casa: 2, visitante: 0 }, 4: { casa: 1, visitante: 0 } },
+                "João Victor": { 1: { casa: 1, visitante: 1 }, 2: { casa: 2, visitante: 1 }, 3: { casa: 1, visitante: 1 }, 4: { casa: 1, visitante: 2 } },
+                "Rita Andrade": { 1: { casa: 2, visitante: 2 }, 2: { casa: 0, visitante: 2 }, 3: { casa: 2, visitante: 1 }, 4: { casa: 2, visitante: 1 } }
             }
         };
 
-        // Carregar do localStorage se houver
-        if (localStorage.getItem('bolao_amigos_data')) {
-            try { dadosApp = JSON.parse(localStorage.getItem('bolao_amigos_data')); } catch(e) {}
+        let dadosApp = JSON.parse(JSON.stringify(DADOS_INICIAIS));
+
+        // Carregar do navegador
+        const salvo = localStorage.getItem('bolao_amigos_v2');
+        if (salvo) {
+            try { dadosApp = JSON.parse(salvo); } catch(e) {}
         }
 
         function salvarDados() {
-            localStorage.setItem('bolao_amigos_data', JSON.stringify(dadosApp));
+            localStorage.setItem('bolao_amigos_v2', JSON.stringify(dadosApp));
+            atualizarPote();
         }
 
-        // Inicialização
-        document.addEventListener('DOMContentLoaded', () => {
+        // Inicializar tela
+        window.onload = function() {
             popularSeletorUsuarios();
+            atualizarPote();
             renderizarPalpites();
             atualizarRanking();
             renderizarAdminPartidas();
-        });
+        };
 
-        // Alternância de Abas
-        function mudarAba(aba) {
-            ['palpites', 'ranking', 'regras', 'admin'].forEach(a => {
-                document.getElementById(`tab-${a}`).classList.add('hidden');
-                document.getElementById(`tab-btn-${a}`).className = "py-2.5 rounded-lg transition flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50";
-            });
-            document.getElementById(`tab-${aba}`).classList.remove('hidden');
-            document.getElementById(`tab-btn-${aba}`).className = "py-2.5 rounded-lg transition flex flex-col items-center gap-1 bg-emerald-600 text-white shadow-lg shadow-emerald-900/20";
+        function atualizarPote() {
+            const qtd = dadosApp.amigos.length;
+            const total = qtd * 10;
+            document.getElementById('info-pote').textContent = `R$ ${total.toFixed(2).replace('.', ',')}`; document.getElementById('info-qtd-amigos').textContent = `${qtd} participantes (R$ 10,00 cada)`;
         }
 
-        // Gestão de Usuário Ativo
+        // Trocar Abas
+        function mudarAba(aba) {
+            ['palpites', 'ranking', 'regras', 'admin'].forEach(a => {
+                document.getElementById(`tab-${a}`).classList.add('hidden'); document.getElementById(`tab-btn-${a}`).className = "py-2.5 rounded-lg transition flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50";
+            });
+            document.getElementById(`tab-${aba}`).classList.remove('hidden'); document.getElementById(`tab-btn-${aba}`).className = "py-2.5 rounded-lg transition flex flex-col items-center gap-1 bg-emerald-600 text-white shadow-lg";
+
+            if (aba === 'ranking') atualizarRanking();
+            if (aba === 'admin') renderizarAdminPartidas();
+        }
+
+        // Trocar Usuário Ativo
         function popularSeletorUsuarios() {
             const select = document.getElementById('select-usuario');
             select.innerHTML = '';
@@ -318,19 +380,19 @@
             renderizarPalpites();
         }
 
-        // Renderizar Partidas na Aba Palpites
-        function filtrarCompeticao(comp) {
+        // Filtrar Competição
+        function filtrarCompeticao(comp, botaoClicado) {
             dadosApp.competicaoFiltro = comp;
             document.querySelectorAll('.filtro-comp').forEach(btn => {
-                if (btn.textContent.toLowerCase() === comp.toLowerCase() || (comp === 'todos' && btn.textContent === 'Todos')) {
-                    btn.className = "filtro-comp px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-semibold whitespace-nowrap transition";
-                } else {
-                    btn.className = "filtro-comp px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap transition";
-                }
+                btn.className = "filtro-comp px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap transition";
             });
+            if (botaoClicado) {
+                botaoClicado.className = "filtro-comp px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-semibold whitespace-nowrap transition";
+            }
             renderizarPalpites();
         }
 
+        // Renderizar Jogos na Aba Palpites
         function renderizarPalpites() {
             const container = document.getElementById('lista-partidas-palpites');
             container.innerHTML = '';
@@ -341,7 +403,7 @@
             const filtradas = dadosApp.partidas.filter(p => dadosApp.competicaoFiltro === 'todos' || p.campeonato === dadosApp.competicaoFiltro);
 
             if (filtradas.length === 0) {
-                container.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs">Nenhuma partida encontrada para este campeonato.</div>`;
+                container.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs bg-slate-900 border border-slate-800 rounded-2xl">Nenhuma partida neste campeonato.</div>`;
                 return;
             }
 
@@ -350,260 +412,15 @@
                     dadosApp.palpites[usuario][p.id] = { casa: 0, visitante: 0 };
                 }
                 const palpite = dadosApp.palpites[usuario][p.id];
+                const finalizado = p.placarOficialCasa !== null && p.placarOficialVisitante !== null;
 
-                const card = `
-                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
-                        <div class="flex justify-between items-center text-[11px]">
-                            <span class="bg-emerald-500/10 text-emerald-400 font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/20">${p.campeonato}</span>
-                            <span class="text-slate-400 font-medium"><i class="fa-regular fa-clock mr-1"></i>${p.data}</span>
-                        </div>
-                        <div class="flex items-center justify-between gap-2">
-                            <!-- Time Casa -->
-                            <div class="flex items-center gap-2 w-2/5 justify-end text-right">
-                                <span class="text-xs font-bold text-white">${p.casa}</span>
-                                <img src="${p.escudoCasa}" alt="${p.casa}" class="w-8 h-8 object-contain">
-                            </div>
-                            <!-- Inputs de Placar -->
-                            <div class="flex items-center gap-1.5 w-1/5 justify-center">
-                                <input type="number" min="0" max="20" value="${palpite.casa}" onchange="atualizarPalpite(${p.id}, 'casa', this.value)" class="w-10 h-10 bg-slate-800 border border-slate-700 text-center text-white font-black text-sm rounded-xl focus:outline-none focus:border-emerald-500">
-                                <span class="text-slate-500 font-bold">x</span>
-                                <input type="number" min="0" max="20" value="${palpite.visitante}" onchange="atualizarPalpite(${p.id}, 'visitante', this.value)" class="w-10 h-10 bg-slate-800 border border-slate-700 text-center text-white font-black text-sm rounded-xl focus:outline-none focus:border-emerald-500">
-                            </div>
-                            <!-- Time Visitante -->
-                            <div class="flex items-center gap-2 w-2/5 justify-start text-left">
-                                <img src="${p.escudoVisitante}" alt="${p.visitante}" class="w-8 h-8 object-contain">
-                                <span class="text-xs font-bold text-white">${p.visitante}</span>
-                            </div>
-                        </div>
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3";
+                card.innerHTML = `
+                    <div class="flex justify-between items-center text-[11px]">
+                        <span class="bg-emerald-500/10 text-emerald-400 font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/20">${p.campeonato}</span>
+                        <span class="text-slate-400 font-medium">${finalizado ? '<span class="text-amber-400 font-bold">Encerrado ('+p.placarOficialCasa+'x'+p.placarOficialVisitante+')</span>' : '<i class="fa-regular fa-clock mr-1"></i>'+p.data}</span>
                     </div>
-                `;
-                container.innerHTML += card;
-            });
-        }
-
-        function atualizarPalpite(partidoId, campo, valor) {
-            const usuario = dadosApp.usuarioAtivo;
-            const val = parseInt(valor) || 0;
-            if (!dadosApp.palpites[usuario][partidoId]) {
-                dadosApp.palpites[usuario][partidoId] = { casa: 0, visitante: 0 };
-            }
-            dadosApp.palpites[usuario][partidoId][campo] = val;
-            salvarDados();
-        }
-
-        // Geração de Comprovante para o WhatsApp
-        function gerarComprovanteWhatsApp() {
-            const usuario = dadosApp.usuarioAtivo;
-            const palpitesUsuario = dadosApp.palpites[usuario] || {};
-
-            let texto = `🏆 *BOLÃO DOS AMIGOS* 🏆\n`;
-            texto += `👤 Participante: *${usuario}*\n\n`;
-            texto += `⚽ *Meus Palpites da Rodada:*\n`;
-
-            dadosApp.partidas.forEach(p => {
-                const palpite = palpitesUsuario[p.id] || { casa: 0, visitante: 0 };
-                texto += `• ${p.casa} ${palpite.casa} x ${palpite.visitante} ${p.visitante} (${p.campeonato})\n`;
-            });
-
-            texto += `\n🎯 *Regra:* 1 Pt por acerto de vencedor/empate!\n`;
-            texto += `🔗 Gerado pelo app Bolão dos Amigos Pro`;
-
-            const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
-            window.open(url, '_blank');
-        }
-
-        // Lógica de Cálculo de Pontos (1 ponto por acerto de resultado)
-        function calcularPontosUsuario(amigo, campeonatoFiltro = 'todos') {
-            let pontosTotal = 0;
-            let acertosTotal = 0;
-            let jogosValidados = 0;
-
-            const palpitesAmigo = dadosApp.palpites[amigo] || {};
-
-            dadosApp.partidas.forEach(p => {
-                if (campeonatoFiltro !== 'todos' && p.campeonato !== campeonatoFiltro) return;
-
-                // Verifica se a partida tem resultado oficial lançado
-                if (p.placarOficialCasa !== null && p.placarOficialVisitante !== null) {
-                    jogosValidados++;
-                    const palpite = palpitesAmigo[p.id];
-                    if (palpite) {
-                        const resultadoOficial = p.placarOficialCasa > p.placarOficialVisitante ? 'casa' : (p.placarOficialCasa < p.placarOficialVisitante ? 'visitante' : 'empate');
-                        const resultadoPalpite = palpite.casa > palpite.visitante ? 'casa' : (palpite.casa < palpite.visitante ? 'visitante' : 'empate');
-
-                        if (resultadoOficial === resultadoPalpite) {
-                            pontosTotal += 1; // 1 Ponto por acerto
-                            acertosTotal += 1;
-                        }
-                    }
-                }
-            });
-
-            return { pontos: pontosTotal, acertos: acertosTotal, jogos: jogosValidados };
-        }
-
-        // Atualizar Ranking
-        function atualizarRanking() {
-            const tbody = document.getElementById('tabela-ranking-corpo');
-            tbody.innerHTML = '';
-            const compFiltro = document.getElementById('filtro-ranking-comp').value;
-
-            // Calcula pontuação de cada amigo
-            const rankingList = dadosApp.amigos.map(amigo => {
-                const res = calcularPontosUsuario(amigo, compFiltro);
-                return { nome: amigo, ...res };
-            });
-
-            // Ordenação: Pontos desc, Acertos desc
-            rankingList.sort((a, b) => b.pontos - a.pontos || b.acertos - a.acertos);
-
-            if (rankingList.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-slate-500">Nenhum participante cadastrado.</td></tr>`;
-                return;
-            }
-
-            rankingList.forEach((item, index) => {
-                const posicao = index + 1;
-                let corPos = "text-slate-400";
-                if (posicao === 1) corPos = "text-amber-400 font-extrabold";
-                if (posicao === 2) corPos = "text-slate-300 font-bold";
-                if (posicao === 3) corPos = "text-amber-600 font-bold";
-
-                const row = `
-                    <tr class="border-b border-slate-800/40 hover:bg-slate-800/30 transition">
-                        <td class="py-3 px-2 text-center ${corPos}">${posicao}º</td>
-                        <td class="py-3 px-2 font-semibold text-white">${item.nome}</td>
-                        <td class="py-3 px-2 text-center text-slate-400">${item.jogos}</td>
-                        <td class="py-3 px-2 text-center text-emerald-400 font-bold">${item.acertos}</td>
-                        <td class="py-3 px-2 text-right font-black text-emerald-400 text-sm">${item.pontos}</td>
-                    </tr>
-                `;
-                tbody.innerHTML += row;
-            });
-        }
-
-        // Painel Admin & Resultados Oficiais
-        function renderizarAdminPartidas() {
-            const container = document.getElementById('lista-admin-partidas');
-            container.innerHTML = '';
-
-            dadosApp.partidas.forEach(p => {
-                const valC = p.placarOficialCasa !== null ? p.placarOficialCasa : '';
-                const valV = p.placarOficialVisitante !== null ? p.placarOficialVisitante : '';
-
-                const div = `
-                    <div class="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3 flex items-center justify-between gap-2">
-                        <div class="w-2/5 truncate">
-                            <span class="text-[10px] text-emerald-400 block font-bold">${p.campeonato}</span>
-                            <span class="text-xs font-semibold text-white">${p.casa} x ${p.visitante}</span>
-                        </div>
-                        <div class="flex items-center gap-1.5 w-2/5 justify-center">
-                            <input type="number" min="0" max="20" placeholder="-" value="${valC}" id="admin-c-${p.id}" class="w-9 h-9 bg-slate-900 border border-slate-700 text-center text-white font-bold text-xs rounded-lg">
-                            <span class="text-slate-500 font-bold">x</span>
-                            <input type="number" min="0" max="20" placeholder="-" value="${valV}" id="admin-v-${p.id}" class="w-9 h-9 bg-slate-900 border border-slate-700 text-center text-white font-bold text-xs rounded-lg">
-                        </div>
-                        <div class="w-1/5 text-right">
-                            <button onclick="salvarResultadoOficial(${p.id})" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition shadow">Salvar</button>
-                        </div>
-                    </div>
-                `;
-                container.innerHTML += div;
-            });
-        }
-
-        function salvarResultadoOficial(partidoId) {
-            const cInput = document.getElementById(`admin-c-${partidoId}`).value;
-            const vInput = document.getElementById(`admin-v-${partidoId}`).value;
-
-            const partida = dadosApp.partidas.find(p => p.id === partidoId);
-            if (partida) {
-                partida.placarOficialCasa = cInput !== '' ? parseInt(cInput) : null;
-                partida.placarOficialVisitante = vInput !== '' ? parseInt(vInput) : null;
-                salvarDados();
-                atualizarRanking();
-                alert("Placar oficial salvo com sucesso! O ranking foi recalculado.");
-            }
-        }
-
-        function adicionarAmigo() {
-            const input = document.getElementById('input-novo-amigo');
-            const nome = input.value.trim();
-            if (!nome) return alert("Digite o nome do participante.");
-            if (dadosApp.amigos.includes(nome)) return alert("Participante já cadastrado.");
-
-            dadosApp.amigos.push(nome);
-            dadosApp.palpites[nome] = {};
-            salvarDados();
-            popularSeletorUsuarios();
-            atualizarRanking();
-            input.value = '';
-            alert(`Participante ${nome} adicionado com sucesso!`);
-        }
-
-        // Importação de Palpite do WhatsApp
-        function abrirModalImportar() {
-            document.getElementById('modal-importar').classList.remove('hidden');
-        }
-
-        function fecharModalImportar() {
-            document.getElementById('modal-importar').classList.add('hidden');
-            document.getElementById('textarea-whatsapp').value = '';
-        }
-
-        function processarImportacaoWhatsApp() {
-            const texto = document.getElementById('textarea-whatsapp').value;
-            if (!texto.trim()) return alert("Cole o texto do comprovante.");
-
-            // Tenta extrair o nome após Participante:
-            let nomeAmigo = "Convidado Zap";
-            const matchNome = texto.match(/Participante:\s*\*?([^\n\*]+)\*?/i);
-            if (matchNome && matchNome[1]) {
-                nomeAmigo = matchNome[1].trim();
-            }
-
-            // Garante que o amigo existe na lista
-            if (!dadosApp.amigos.includes(nomeAmigo)) {
-                dadosApp.amigos.push(nomeAmigo);
-                popularSeletorUsuarios();
-            }
-
-            if (!dadosApp.palpites[nomeAmigo]) dadosApp.palpites[nomeAmigo] = {};
-
-            // Extrai palpites do formato "• TimeA 2 x 1 TimeB"
-            const linhas = texto.split('\n');
-            let importadosCount = 0;
-
-            linhas.forEach(linha => {
-                const matchJogo = linha.match(/•\s*(.+?)\s+(\d+)\s*x\s*(\d+)\s*(.+)/i);
-                if (matchJogo) {
-                    const timeCasa = matchJogo.1.trim();
-                    const golsC = parseInt(matchJogo.2);
-                    const golsV = parseInt(matchJogo.3);
-
-                    // Acha a partida correspondente no app
-                    const partidaEncontrada = dadosApp.partidas.find(p => p.casa.toLowerCase().includes(timeCasa.toLowerCase()));
-                    if (partidaEncontrada) {
-                        dadosApp.palpites[nomeAmigo][partidaEncontrada.id] = { casa: golsC, visitante: golsV };
-                        importadosCount++;
-                    }
-                }
-            });
-
-            salvarDados();
-            atualizarRanking();
-            fecharModalImportar();
-            alert(`Palpite de ${nomeAmigo} importado com sucesso (${importadosCount} jogos reconhecidos)!`);
-            dadosApp.usuarioAtivo = nomeAmigo;
-            popularSeletorUsuarios();
-            renderizarPalpites();
-        }
-
-        function copiarPix() {
-            const chave = document.getElementById('txt-pix').innerText;
-            navigator.clipboard.writeText(chave).then(() => {
-                alert("Chave Pix copiada com sucesso!");
-            });
-        }
-    </script>
-</body>
-</html>
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2 w-2/5 justify-end text-right">
+                            <span class
