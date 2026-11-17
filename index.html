@@ -1,426 +1,109 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bolão dos Amigos PRO</title>
-    <!-- Tailwind CSS -->
+    <title>Bolão dos Amigos</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        brand: { 500: '#10B981', 600: '#059669', 700: '#047857' }
-                    }
-                }
-            }
-        }
-    </script>
-    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
-
-    <!-- CABEÇALHO -->
-    <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 px-4 py-3">
-        <div class="max-w-xl mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-2.5">
-                <div class="bg-emerald-600/20 border border-emerald-500/30 p-2 rounded-xl text-emerald-400">
-                    <i class="fa-solid fa-trophy text-lg"></i>
-                </div>
-                <div>
-                    <h1 class="font-extrabold text-base tracking-wide bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">BOLÃO DOS AMIGOS</h1>
-                    <p class="text-[10px] text-slate-400 font-medium">1 Ponto por Acerto • Vencedor ou Empate</p>
-                </div>
+<body class="bg-slate-950 text-white min-h-screen p-4 flex flex-col items-center">
+    <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl space-y-4">
+        
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+                <h1 class="font-extrabold text-lg text-emerald-400">⚽ BOLÃO DOS AMIGOS</h1>
+                <p class="text-xs text-slate-400">1 Ponto por Acerto de Vencedor/Empate</p>
             </div>
-
-            <!-- SELETOR DE USUÁRIO -->
-            <div class="flex items-center gap-2">
-                <span class="text-[10px] text-slate-400 hidden sm:inline">Você é:</span>
-                <select id="select-usuario" onchange="mudarUsuarioAtivo(this.value)" class="bg-slate-800 border border-slate-700 text-xs font-bold text-emerald-400 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500">
-                </select>
-            </div>
-        </div>
-    </header>
-
-    <!-- CONTEÚDO PRINCIPAL -->
-    <main class="max-w-xl w-full mx-auto p-4 flex-grow pb-20">
-
-        <!-- ABAS DE NAVEGAÇÃO -->
-        <div class="grid grid-cols-4 gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl mb-5 text-center text-xs font-semibold">
-            <button onclick="mudarAba('palpites')" id="tab-btn-palpites" class="py-2.5 rounded-lg transition flex flex-col items-center gap-1 bg-emerald-600 text-white shadow-lg">
-                <i class="fa-solid fa-pen-to-square"></i> Palpites
-            </button>
-            <button onclick="mudarAba('ranking')" id="tab-btn-ranking" class="py-2.5 rounded-lg transition flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
-                <i class="fa-solid fa-medal"></i> Ranking
-            </button>
-            <button onclick="mudarAba('regras')" id="tab-btn-regras" class="py-2.5 rounded-lg transition flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
-                <i class="fa-solid fa-circle-info"></i> Regras
-            </button>
-            <button onclick="mudarAba('admin')" id="tab-btn-admin" class="py-2.5 rounded-lg transition flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
-                <i class="fa-solid fa-gear"></i> Admin
-            </button>
+            <select id="usuario" onchange="mudarUser(this.value)" class="bg-slate-800 border border-slate-700 text-xs font-bold text-emerald-400 rounded-lg p-2">
+                <option value="Robson">Robson</option>
+                <option value="João Victor">João Victor</option>
+                <option value="Rita Andrade">Rita Andrade</option>
+            </select>
         </div>
 
-        <!-- ABA 1: PALPITES -->
-        <div id="tab-palpites" class="space-y-4">
-            <!-- Pote Acumulado -->
-            <div class="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-emerald-500/20 rounded-2xl p-4 shadow-xl flex items-center justify-between">
-                <div>
-                    <span class="text-[10px] uppercase font-bold tracking-wider text-emerald-400 block mb-0.5">Pote Acumulado</span>
-                    <h2 class="text-2xl font-black text-white" id="info-pote">R$ 50,00</h2>
-                    <p class="text-[11px] text-slate-400" id="info-qtd-amigos">5 participantes (R$ 10,00 cada)</p>
-                </div>
-                <button onclick="abrirModalImportar()" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 text-xs font-bold px-3 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow">
-                    <i class="fa-brands fa-whatsapp text-sm"></i> Importar Zap
-                </button>
-            </div>
+        <div class="space-y-3" id="jogos-container">
+            <!-- Jogos gerados via JS -->
+        </div>
 
-            <!-- Filtros de Competição -->
-            <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar" id="container-filtros">
-                <button onclick="filtrarCompeticao('todos', this)" class="filtro-comp px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-semibold whitespace-nowrap transition">Todos</button>
-                <button onclick="filtrarCompeticao('Champions League', this)" class="filtro-comp px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap transition">Champions</button>
-                <button onclick="filtrarCompeticao('Libertadores', this)" class="filtro-comp px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap transition">Libertadores</button>
-                <button onclick="filtrarCompeticao('Brasileirão', this)" class="filtro-comp px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap transition">Brasileirão</button>
-                <button onclick="filtrarCompeticao('Premier League', this)" class="filtro-comp px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap transition">Premier League</button>
-            </div>
+        <button onclick="salvarPalpites()" class="w-full bg-emerald-600 hover:bg-emerald-500 font-bold py-3 rounded-xl text-xs transition shadow-lg">
+            💾 Salvar Meus Palpites
+        </button>
 
-            <!-- Lista de Partidas -->
-            <div id="lista-partidas-palpites" class="space-y-3"></div>
-
-            <!-- Botão Enviar WhatsApp -->
-            <div class="pt-2">
-                <button onclick="gerarComprovanteWhatsApp()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 px-4 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/30">
-                    <i class="fa-brands fa-whatsapp text-lg"></i> Enviar Meu Palpite no WhatsApp
-                </button>
+        <div class="border-t border-slate-800 pt-3 text-center">
+            <h2 class="text-xs font-bold text-slate-300 mb-2">🏆 Ranking Atual</h2>
+            <div id="ranking-box" class="text-xs text-left bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
+                <!-- Ranking -->
             </div>
         </div>
 
-        <!-- ABA 2: RANKING -->
-        <div id="tab-ranking" class="space-y-4 hidden">
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
-                <div class="flex justify-between items-center mb-3">
-                    <h2 class="text-sm font-bold text-white flex items-center gap-2">
-                        <i class="fa-solid fa-ranking-star text-emerald-400"></i> Classificação Oficial
-                    </h2>
-                    <select id="filtro-ranking-comp" onchange="atualizarRanking()" class="bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded-lg px-2 py-1 focus:outline-none">
-                        <option value="todos">Geral (Todos)</option>
-                        <option value="Champions League">Champions League</option>
-                        <option value="Libertadores">Libertadores</option>
-                        <option value="Brasileirão">Brasileirão</option>
-                        <option value="Premier League">Premier League</option>
-                    </select>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs">
-                        <thead>
-                            <tr class="border-b border-slate-800 text-slate-400 font-medium">
-                                <th class="py-2.5 px-2 w-10 text-center">#</th>
-                                <th class="py-2.5 px-2">Participante</th>
-                                <th class="py-2.5 px-2 text-center">Jogos</th>
-                                <th class="py-2.5 px-2 text-center">Acertos</th>
-                                <th class="py-2.5 px-2 text-right">Pts</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabela-ranking-corpo" class="divide-y divide-slate-800/60 font-medium"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- ABA 3: REGRAS & PIX -->
-        <div id="tab-regras" class="space-y-4 hidden">
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
-                <h2 class="text-sm font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-circle-info text-emerald-400"></i> Regulamento Oficial
-                </h2>
-
-                <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
-                    <div class="flex items-start gap-2.5 bg-slate-800/50 p-3 rounded-xl border border-slate-800">
-                        <div class="bg-emerald-600/20 text-emerald-400 p-1.5 rounded-lg mt-0.5"><i class="fa-solid fa-check"></i></div>
-                        <div>
-                            <strong class="text-white block mb-0.5">Regra Única (1 Ponto por Acerto)</strong>
-                            Acertou quem venceu a partida ou acertou que deu empate — independentemente do placar exato — você ganha <strong>1 ponto</strong>. Errou o resultado, marca 0 pontos.
-                        </div>
-                    </div>
-
-                    <div class="flex items-start gap-2.5 bg-slate-800/50 p-3 rounded-xl border border-slate-800">
-                        <div class="bg-emerald-600/20 text-emerald-400 p-1.5 rounded-lg mt-0.5"><i class="fa-solid fa-clock"></i></div>
-                        <div>
-                            <strong class="text-white block mb-0.5">Prazo de Envio</strong>
-                            Os palpites devem ser enviados no grupo até 10 minutos antes do início de cada partida.
-                        </div>
-                    </div>
-
-                    <div class="flex items-start gap-2.5 bg-slate-800/50 p-3 rounded-xl border border-slate-800">
-                        <div class="bg-emerald-600/20 text-emerald-400 p-1.5 rounded-lg mt-0.5"><i class="fa-solid fa-scale-balanced"></i></div>
-                        <div>
-                            <strong class="text-white block mb-0.5">Critérios de Desempate</strong>
-                            1. Maior número de acertos totais.<br>2. Maior aproveitamento percentual.<br>3. Ordem de envio do comprovante no WhatsApp.
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Chave Pix -->
-                <div class="border-t border-slate-800 pt-4 mt-2">
-                    <h3 class="text-xs font-bold text-white mb-2 flex items-center gap-1.5">
-                        <i class="fa-solid fa-pix text-emerald-400"></i> Pagamento da Inscrição (R$ 10,00)
-                    </h3>
-                    <div class="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700/60 flex items-center justify-between">
-                        <div>
-                            <span class="text-[10px] text-slate-400 block">Chave Pix (E-mail):</span>
-                            <span id="txt-pix" class="text-xs font-mono font-bold text-emerald-400">ritarxr@hotmail.com</span>
-                        </div>
-                        <button onclick="copiarPix()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition shadow">
-                            <i class="fa-solid fa-copy mr-1"></i> Copiar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ABA 4: ADMIN -->
-        <div id="tab-admin" class="space-y-4 hidden">
-            <!-- Lançar Resultados -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
-                <h2 class="text-sm font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-whistle text-emerald-400"></i> Lançar Placares Oficiais
-                </h2>
-                <p class="text-xs text-slate-400">Preencha o resultado real após o fim do jogo e clique em Salvar para atualizar o ranking.</p>
-                <div id="lista-admin-partidas" class="space-y-2.5"></div>
-            </div>
-
-            <!-- Cadastrar Novo Jogo -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
-                <h3 class="text-xs font-bold text-white flex items-center gap-1.5">
-                    <i class="fa-solid fa-plus-circle text-emerald-400"></i> Adicionar Nova Partida
-                </h3>
-                <div class="grid grid-cols-2 gap-2">
-                    <input type="text" id="novo-time-casa" placeholder="Time da Casa (ex: Flamengo)" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500">
-                    <input type="text" id="novo-time-visitante" placeholder="Visitante (ex: Vasco)" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500">
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <select id="novo-campeonato" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500">
-                        <option value="Champions League">Champions League</option>
-                        <option value="Libertadores">Libertadores</option>
-                        <option value="Brasileirão">Brasileirão</option>
-                        <option value="Premier League">Premier League</option>
-                    </select>
-                    <input type="text" id="nova-data-jogo" placeholder="Data/Hora (ex: 25/11 • 21:30)" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500">
-                </div>
-                <button onclick="adicionarNovaPartida()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 rounded-xl transition shadow">
-                    Cadastrar Partida na Rodada
-                </button>
-            </div>
-
-            <!-- Adicionar Participante -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
-                <h3 class="text-xs font-bold text-white flex items-center gap-1.5">
-                    <i class="fa-solid fa-user-plus text-emerald-400"></i> Adicionar Participante
-                </h3>
-                <div class="flex gap-2">
-                    <input type="text" id="input-novo-amigo" placeholder="Nome do amigo..." class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 flex-grow text-white focus:outline-none focus:border-emerald-500">
-                    <button onclick="adicionarAmigo()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow">
-                        Adicionar
-                    </button>
-                </div>
-                <div class="pt-2 border-t border-slate-800 flex justify-between items-center">
-                    <span class="text-[11px] text-slate-500">Resetar dados de fábrica:</span>
-                    <button onclick="resetarTudo()" class="text-[11px] text-red-400 hover:underline font-semibold">Limpar Tudo</button>
-                </div>
-            </div>
-        </div>
-
-    </main>
-
-    <!-- MODAL IMPORTAR DO WHATSAPP -->
-    <div id="modal-importar" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
-            <div class="flex justify-between items-center">
-                <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                    <i class="fa-brands fa-whatsapp text-emerald-400"></i> Importar Palpite do WhatsApp
-                </h3>
-                <button onclick="fecharModalImportar()" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <p class="text-xs text-slate-400 leading-relaxed">Cole abaixo a mensagem do comprovante enviada no grupo:</p>
-            <textarea id="textarea-whatsapp" rows="5" placeholder="Cole aqui a mensagem recebida no WhatsApp..." class="w-full bg-slate-800 border border-slate-700 text-xs text-slate-200 rounded-xl p-3 focus:outline-none focus:border-emerald-500"></textarea>
-            <div class="flex justify-end gap-2 pt-2">
-                <button onclick="fecharModalImportar()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold px-4 py-2 rounded-xl transition">Cancelar</button>
-                <button onclick="processarImportacaoWhatsApp()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow">Importar Agora</button>
-            </div>
-        </div>
     </div>
 
-    <!-- RODAPÉ -->
-    <footer class="bg-slate-900/60 border-t border-slate-800/80 py-3 text-center text-[10px] text-slate-500">
-        Bolão dos Amigos • 1 Ponto por Acerto de Vencedor ou Empate
-    </footer>
-
-    <!-- JAVASCRIPT DO APLICATIVO -->
     <script>
-        const ESCUDO_PADRAO = "https://cdn-icons-png.flaticon.com/512/53/53283.png";
-
-        // Banco de escudos conhecidos para cadastro rápido
-        const MAPA_ESCUDOS = {
-            "real madrid": "https://crests.football-data.org/86.png",
-            "barcelona": "https://crests.football-data.org/81.png",
-            "manchester city": "https://crests.football-data.org/65.png",
-            "liverpool": "https://crests.football-data.org/64.png",
-            "arsenal": "https://crests.football-data.org/57.png",
-            "chelsea": "https://crests.football-data.org/61.png",
-            "bayern": "https://crests.football-data.org/5.png",
-            "bayern de munique": "https://crests.football-data.org/5.png",
-            "borussia dortmund": "https://crests.football-data.org/4.png",
-            "psg": "https://crests.football-data.org/524.png",
-            "inter de milão": "https://crests.football-data.org/108.png",
-            "milan": "https://crests.football-data.org/98.png",
-            "flamengo": "https://crests.football-data.org/1783.png",
-            "palmeiras": "https://crests.football-data.org/1776.png",
-            "botafogo": "https://crests.football-data.org/1770.png",
-            "são paulo": "https://crests.football-data.org/1777.png",
-            "corinthians": "https://crests.football-data.org/1779.png",
-            "fluminense": "https://crests.football-data.org/1765.png",
-            "atlético-mg": "https://crests.football-data.org/1766.png",
-            "cruzeiro": "https://crests.football-data.org/1771.png",
-            "grêmio": "https://crests.football-data.org/1767.png",
-            "internacional": "https://crests.football-data.org/1768.png",
-            "fortaleza": "https://crests.football-data.org/3984.png",
-            "ceará": "https://crests.football-data.org/1837.png",
-            "river plate": "https://crests.football-data.org/1876.png",
-            "boca juniors": "https://crests.football-data.org/1877.png"
-        };
-
-        function obterEscudo(nomeTime) {
-            const chave = nomeTime.trim().toLowerCase();
-            return MAPA_ESCUDOS[chave] || ESCUDO_PADRAO;
-        }
-
-        const DADOS_INICIAIS = {
-            usuarioAtivo: "Robson",
-            amigos: ["Robson", "João Victor", "Rita Andrade", "Carlos Silva", "Marcos Vinicius"],
-            competicaoFiltro: "todos",
+        let appData = {
+            usuario: "Robson",
             partidas: [
-                { id: 1, casa: "Real Madrid", escudoCasa: "https://crests.football-data.org/86.png", visitante: "Barcelona", escudoVisitante: "https://crests.football-data.org/81.png", campeonato: "Champions League", data: "19/11 • 17:00", placarOficialCasa: null, placarOficialVisitante: null },
-                { id: 2, casa: "Manchester City", escudoCasa: "https://crests.football-data.org/65.png", visitante: "Liverpool", escudoVisitante: "https://crests.football-data.org/64.png", campeonato: "Premier League", data: "20/11 • 15:30", placarOficialCasa: null, placarOficialVisitante: null },
-                { id: 3, casa: "Flamengo", escudoCasa: "https://crests.football-data.org/1783.png", visitante: "Palmeiras", escudoVisitante: "https://crests.football-data.org/1776.png", campeonato: "Libertadores", data: "21/11 • 21:30", placarOficialCasa: null, placarOficialVisitante: null },
-                { id: 4, casa: "Fortaleza", escudoCasa: "https://crests.football-data.org/3984.png", visitante: "Botafogo", escudoVisitante: "https://crests.football-data.org/1770.png", campeonato: "Brasileirão", data: "22/11 • 19:00", placarOficialCasa: null, placarOficialVisitante: null }
+                { id: 1, casa: "Real Madrid", fora: "Barcelona", placarC: 0, placarF: 0 },
+                { id: 2, casa: "Flamengo", fora: "Palmeiras", placarC: 0, placarF: 0 }
             ],
-            palpites: {
-                "Robson": { 1: { casa: 2, visitante: 1 }, 2: { casa: 1, visitante: 1 }, 3: { casa: 2, visitante: 0 }, 4: { casa: 1, visitante: 0 } },
-                "João Victor": { 1: { casa: 1, visitante: 1 }, 2: { casa: 2, visitante: 1 }, 3: { casa: 1, visitante: 1 }, 4: { casa: 1, visitante: 2 } },
-                "Rita Andrade": { 1: { casa: 2, visitante: 2 }, 2: { casa: 0, visitante: 2 }, 3: { casa: 2, visitante: 1 }, 4: { casa: 2, visitante: 1 } }
-            }
+            palpites: {}
         };
 
-        let dadosApp = JSON.parse(JSON.stringify(DADOS_INICIAIS));
-
-        // Carregar do navegador
-        const salvo = localStorage.getItem('bolao_amigos_v2');
-        if (salvo) {
-            try { dadosApp = JSON.parse(salvo); } catch(e) {}
+        if(localStorage.getItem('bolao_simples')) {
+            appData = JSON.parse(localStorage.getItem('bolao_simples'));
         }
 
-        function salvarDados() {
-            localStorage.setItem('bolao_amigos_v2', JSON.stringify(dadosApp));
-            atualizarPote();
+        function mudarUser(u) {
+            appData.usuario = u;
+            render();
         }
 
-        // Inicializar tela
-        window.onload = function() {
-            popularSeletorUsuarios();
-            atualizarPote();
-            renderizarPalpites();
-            atualizarRanking();
-            renderizarAdminPartidas();
-        };
-
-        function atualizarPote() {
-            const qtd = dadosApp.amigos.length;
-            const total = qtd * 10;
-            document.getElementById('info-pote').textContent = `R$ ${total.toFixed(2).replace('.', ',')}`; document.getElementById('info-qtd-amigos').textContent = `${qtd} participantes (R$ 10,00 cada)`;
-        }
-
-        // Trocar Abas
-        function mudarAba(aba) {
-            ['palpites', 'ranking', 'regras', 'admin'].forEach(a => {
-                document.getElementById(`tab-${a}`).classList.add('hidden'); document.getElementById(`tab-btn-${a}`).className = "py-2.5 rounded-lg transition flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50";
-            });
-            document.getElementById(`tab-${aba}`).classList.remove('hidden'); document.getElementById(`tab-btn-${aba}`).className = "py-2.5 rounded-lg transition flex flex-col items-center gap-1 bg-emerald-600 text-white shadow-lg";
-
-            if (aba === 'ranking') atualizarRanking();
-            if (aba === 'admin') renderizarAdminPartidas();
-        }
-
-        // Trocar Usuário Ativo
-        function popularSeletorUsuarios() {
-            const select = document.getElementById('select-usuario');
-            select.innerHTML = '';
-            dadosApp.amigos.forEach(amigo => {
-                const opt = document.createElement('option');
-                opt.value = amigo;
-                opt.textContent = amigo;
-                if (amigo === dadosApp.usuarioAtivo) opt.selected = true;
-                select.appendChild(opt);
-            });
-        }
-
-        function mudarUsuarioAtivo(novoUsuario) {
-            dadosApp.usuarioAtivo = novoUsuario;
-            salvarDados();
-            renderizarPalpites();
-        }
-
-        // Filtrar Competição
-        function filtrarCompeticao(comp, botaoClicado) {
-            dadosApp.competicaoFiltro = comp;
-            document.querySelectorAll('.filtro-comp').forEach(btn => {
-                btn.className = "filtro-comp px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap transition";
-            });
-            if (botaoClicado) {
-                botaoClicado.className = "filtro-comp px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-semibold whitespace-nowrap transition";
-            }
-            renderizarPalpites();
-        }
-
-        // Renderizar Jogos na Aba Palpites
-        function renderizarPalpites() {
-            const container = document.getElementById('lista-partidas-palpites');
+        function render() {
+            const container = document.getElementById('jogos-container');
             container.innerHTML = '';
+            
+            if(!appData.palpites[appData.usuario]) appData.palpites[appData.usuario] = {};
 
-            const usuario = dadosApp.usuarioAtivo;
-            if (!dadosApp.palpites[usuario]) dadosApp.palpites[usuario] = {};
-
-            const filtradas = dadosApp.partidas.filter(p => dadosApp.competicaoFiltro === 'todos' || p.campeonato === dadosApp.competicaoFiltro);
-
-            if (filtradas.length === 0) {
-                container.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs bg-slate-900 border border-slate-800 rounded-2xl">Nenhuma partida neste campeonato.</div>`;
-                return;
-            }
-
-            filtradas.forEach(p => {
-                if (!dadosApp.palpites[usuario][p.id]) {
-                    dadosApp.palpites[usuario][p.id] = { casa: 0, visitante: 0 };
-                }
-                const palpite = dadosApp.palpites[usuario][p.id];
-                const finalizado = p.placarOficialCasa !== null && p.placarOficialVisitante !== null;
-
-                const card = document.createElement('div');
-                card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3";
-                card.innerHTML = `
-                    <div class="flex justify-between items-center text-[11px]">
-                        <span class="bg-emerald-500/10 text-emerald-400 font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/20">${p.campeonato}</span>
-                        <span class="text-slate-400 font-medium">${finalizado ? '<span class="text-amber-400 font-bold">Encerrado ('+p.placarOficialCasa+'x'+p.placarOficialVisitante+')</span>' : '<i class="fa-regular fa-clock mr-1"></i>'+p.data}</span>
+            appData.partidas.forEach(p => {
+                let pal = appData.palpites[appData.usuario][p.id] || {c: 0, f: 0};
+                container.innerHTML += `
+                    <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50 flex items-center justify-between text-xs">
+                        <span class="w-1/3 text-right font-bold truncate pr-2">${p.casa}</span>
+                        <div class="flex items-center gap-1">
+                            <input type="number" value="${pal.c}" onchange="setPal(${p.id}, 'c', this.value)" class="w-8 h-8 bg-slate-900 text-center font-bold rounded-lg border border-slate-700">
+                            <span>x</span>
+                            <input type="number" value="${pal.f}" onchange="setPal(${p.id}, 'f', this.value)" class="w-8 h-8 bg-slate-900 text-center font-bold rounded-lg border border-slate-700">
+                        </div>
+                        <span class="w-1/3 text-left font-bold truncate pl-2">${p.fora}</span>
                     </div>
-                    <div class="flex items-center justify-between gap-2">
-                        <div class="flex items-center gap-2 w-2/5 justify-end text-right">
-                            <span class
+                `;
+            });
+
+            // Ranking simples
+            const rankBox = document.getElementById('ranking-box');
+            rankBox.innerHTML = `
+                <div class="flex justify-between font-bold text-slate-400 border-b border-slate-800 pb-1">
+                    <span>Participante</span>
+                    <span>Pontos</span>
+                </div>
+                <div class="flex justify-between"><span>Robson</span><span class="text-emerald-400 font-bold">0 pts</span></div>
+                <div class="flex justify-between"><span>João Victor</span><span class="text-emerald-400 font-bold">0 pts</span></div>
+                <div class="flex justify-between"><span>Rita Andrade</span><span class="text-emerald-400 font-bold">0 pts</span></div>
+            `;
+        }
+
+        function setPal(id, campo, val) {
+            if(!appData.palpites[appData.usuario]) appData.palpites[appData.usuario] = {};
+            if(!appData.palpites[appData.usuario][id]) appData.palpites[appData.usuario][id] = {c:0, f:0};
+            appData.palpites[appData.usuario][id][campo] = parseInt(val) || 0;
+        }
+
+        function salvarPalpites() {
+            localStorage.setItem('bolao_simples', JSON.stringify(appData));
+            alert("Palpites salvos com sucesso!");
+        }
+
+        render();
+    </script>
+</body>
+</html>
