@@ -9,8 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between">
@@ -55,7 +53,7 @@
             </button>
         </div>
 
-        <!-- ABA 1: PALPITES -->
+        <!-- ABA 1: PALPITES (Sem guia de torneio superior, agora agrupado por partidas) -->
         <div id="tab-palpites" class="space-y-4">
             <div class="bg-slate-900 border border-emerald-500/20 rounded-2xl p-4 shadow-xl flex items-center justify-between">
                 <div>
@@ -68,9 +66,7 @@
                 </button>
             </div>
 
-            <!-- Filtros de Competição Dinâmicos -->
-            <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar" id="container-filtros"></div>
-
+            <!-- Lista de Partidas com o Torneio embutido -->
             <div id="lista-partidas-palpites" class="space-y-3"></div>
 
             <button type="button" onclick="gerarComprovanteWhatsApp()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 px-4 rounded-xl transition flex items-center justify-center gap-2 shadow-lg">
@@ -164,13 +160,14 @@
                     <div id="lista-admin-partidas" class="space-y-2.5"></div>
                 </div>
 
-                <!-- Adicionar Novo Torneio -->
+                <!-- Gestão de Torneios (Adicionar, Editar e Apagar) -->
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
-                    <h3 class="text-xs font-bold text-white flex items-center gap-1.5"><i class="fa-solid fa-trophy text-emerald-400"></i> Adicionar Novo Torneio</h3>
+                    <h3 class="text-xs font-bold text-white flex items-center gap-1.5"><i class="fa-solid fa-trophy text-emerald-400"></i> Gerenciar Torneios / Campeonatos</h3>
                     <div class="flex gap-2">
                         <input type="text" id="input-novo-torneio" placeholder="Nome do torneio (ex: Paulistão)..." class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 flex-grow text-white">
                         <button type="button" onclick="adicionarTorneio()" class="bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-xl">Criar</button>
                     </div>
+                    <div id="lista-admin-torneios" class="space-y-1.5 pt-2 border-t border-slate-800 max-h-40 overflow-y-auto"></div>
                 </div>
 
                 <!-- Adicionar Nova Partida -->
@@ -229,13 +226,22 @@
         const SENHA_ADMIN = "1234";
         let adminLogado = false;
 
-        const ESCUDO_PADRAO = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310B981'><path d='M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm0 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z'/></svg>";
-        
+        // Gerador SVG embutido robusto e elegante para times/seleções sem erro de imagem
+        function gerarEscudoVetorial(nome) {
+            const iniciais = nome.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23064e3b'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' fill='%2334d399' font-size='38' font-family='sans-serif' font-weight='bold'>${iniciais}</text></svg>`;
+        }
+
+        // Base oficial com os maiores clubes e seleções do mundo garantidos via Wikimedia
         const MAPA_ESCUDOS = {
             "real madrid": "https://upload.wikimedia.org/wikipedia/en/5/56/Real_Madrid_CF.svg",
             "barcelona": "https://upload.wikimedia.org/wikipedia/en/4/47/FC_Barcelona_%28crest%29.svg",
             "manchester city": "https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg",
             "liverpool": "https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg",
+            "arsenal": "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg",
+            "chelsea": "https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg",
+            "bayern": "https://upload.wikimedia.org/wikipedia/commons/1/1b/FC_Bayern_M%C3%BCnchen_logo_%282017%29.svg",
+            "psg": "https://upload.wikimedia.org/wikipedia/en/a/a7/Paris_Saint-Germain_F.C..svg",
             "flamengo": "https://upload.wikimedia.org/wikipedia/commons/2/2e/Flamengo_braz_logo.svg",
             "palmeiras": "https://upload.wikimedia.org/wikipedia/commons/1/10/Palmeiras_logo.svg",
             "são paulo": "https://upload.wikimedia.org/wikipedia/commons/6/6f/Brasao_do_Sao_Paulo_Futebol_Clube.svg",
@@ -249,27 +255,27 @@
             "internacional": "https://upload.wikimedia.org/wikipedia/commons/f/f1/Escudo_do_Sport_Club_Internacional.svg",
             "fortaleza": "https://upload.wikimedia.org/wikipedia/commons/e/e9/Fortaleza_EC_2018.png",
             "ceará": "https://upload.wikimedia.org/wikipedia/commons/3/38/Cear%C3%A1_Sporting_Club_logo.svg",
-            "ceara": "https://upload.wikimedia.org/wikipedia/commons/3/38/Cear%C3%A1_Sporting_Club_logo.svg"
+            "ceara": "https://upload.wikimedia.org/wikipedia/commons/3/38/Cear%C3%A1_Sporting_Club_logo.svg",
+            // Seleções
+            "brasil": "https://upload.wikimedia.org/wikipedia/en/9/99/Brazil_national_football_team_logo.svg",
+            "argentina": "https://upload.wikimedia.org/wikipedia/en/c/c1/Argentina_national_football_team_logo.svg",
+            "frança": "https://upload.wikimedia.org/wikipedia/en/1/1e/France_National_Football_Team_Badge.svg",
+            "espanha": "https://upload.wikimedia.org/wikipedia/en/9/98/Spain_National_Football_Team_Badge.svg",
+            "itália": "https://upload.wikimedia.org/wikipedia/en/1/1d/Italy_National_Football_Team_Badge.svg",
+            "alemanha": "https://upload.wikimedia.org/wikipedia/en/d/d1/Germany_National_Football_Team_Badge.svg",
+            "portugal": "https://upload.wikimedia.org/wikipedia/en/5/58/Portugal_National_Football_Team_Badge.svg"
         };
 
-        async function buscarEscudoAutomatico(nomeTime) {
-            const chave = nomeTime.trim().toLowerCase();
+        function obterEscudo(nome) {
+            const chave = nome.trim().toLowerCase();
             if (MAPA_ESCUDOS[chave]) return MAPA_ESCUDOS[chave];
-            try {
-                const resp = await fetch(`https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${encodeURIComponent(nomeTime.trim())}`);
-                const dados = await resp.json();
-                if (dados && dados.teams && dados.teams.length > 0 && dados.teams[0].strBadge) {
-                    return dados.teams[0].strBadge;
-                }
-            } catch (e) {}
-            return ESCUDO_PADRAO;
+            return gerarEscudoVetorial(nome);
         }
 
         const DADOS_PADRAO = {
             usuarioAtivo: "",
             amigos: [],
             torneios: ["Champions League", "Libertadores", "Brasileirão", "Premier League"],
-            competicaoFiltro: "todos",
             partidas: [
                 { id: 1, casa: "Real Madrid", escudoCasa: MAPA_ESCUDOS["real madrid"], visitante: "Barcelona", escudoVisitante: MAPA_ESCUDOS["barcelona"], campeonato: "Champions League", data: "19/11 • 17:00", placarOficialCasa: null, placarOficialVisitante: null },
                 { id: 2, casa: "Manchester City", escudoCasa: MAPA_ESCUDOS["manchester city"], visitante: "Liverpool", escudoVisitante: MAPA_ESCUDOS["liverpool"], campeonato: "Premier League", data: "20/11 • 15:30", placarOficialCasa: null, placarOficialVisitante: null },
@@ -280,8 +286,7 @@
         };
 
         let dadosApp = JSON.parse(JSON.stringify(DADOS_PADRAO));
-        // Chave universal unificada para evitar perda de dados
-        const CHAVE_STORAGE = 'bolao_amigos_master_v5';
+        const CHAVE_STORAGE = 'bolao_amigos_master_v6';
         const salvo = localStorage.getItem(CHAVE_STORAGE);
         if (salvo) {
             try { dadosApp = JSON.parse(salvo); } catch(e) {}
@@ -306,7 +311,7 @@
 
             if (aba === 'ranking') { atualizarSelectRankingComp(); atualizarRanking(); }
             if (aba === 'admin') checarAdminEstado();
-            if (aba === 'palpites') { renderizarFiltros(); renderizarPalpites(); }
+            if (aba === 'palpites') { renderizarPalpites(); }
         }
 
         function validarSenhaAdmin() {
@@ -333,6 +338,7 @@
                 painelConteudo.classList.remove('hidden');
                 renderizarAdminPartidas();
                 renderizarAdminAmigos();
+                renderizarAdminTorneios();
                 atualizarSelectNovoJogoCampeonato();
             } else {
                 loginBox.classList.remove('hidden');
@@ -372,34 +378,6 @@
             renderizarPalpites();
         }
 
-        function renderizarFiltros() {
-            const container = document.getElementById('container-filtros');
-            if (!container) return;
-            container.innerHTML = '';
-
-            const btnTodos = document.createElement('button');
-            btnTodos.type = "button";
-            btnTodos.className = `filtro-comp px-3 py-1.5 rounded-lg ${dadosApp.competicaoFiltro === 'todos' ? 'bg-emerald-600 text-white font-semibold' : 'bg-slate-800 text-slate-300'} whitespace-nowrap`;
-            btnTodos.textContent = "Todos";
-            btnTodos.onclick = () => filtrarCompeticao('todos', btnTodos);
-            container.appendChild(btnTodos);
-
-            dadosApp.torneios.forEach(t => {
-                const btn = document.createElement('button');
-                btn.type = "button";
-                btn.className = `filtro-comp px-3 py-1.5 rounded-lg ${dadosApp.competicaoFiltro === t ? 'bg-emerald-600 text-white font-semibold' : 'bg-slate-800 text-slate-300'} whitespace-nowrap`;
-                btn.textContent = t;
-                btn.onclick = () => filtrarCompeticao(t, btn);
-                container.appendChild(btn);
-            });
-        }
-
-        function filtrarCompeticao(comp, btn) {
-            dadosApp.competicaoFiltro = comp;
-            renderizarFiltros();
-            renderizarPalpites();
-        }
-
         function atualizarSelectRankingComp() {
             const select = document.getElementById('filtro-ranking-comp');
             if (!select) return;
@@ -418,6 +396,7 @@
             });
         }
 
+        // Renderizar Partidas na aba Palpites com o Torneio integrado no card
         function renderizarPalpites() {
             const container = document.getElementById('lista-partidas-palpites');
             if (!container) return;
@@ -431,14 +410,12 @@
 
             if (!dadosApp.palpites[user]) dadosApp.palpites[user] = {};
 
-            const lista = dadosApp.partidas.filter(p => dadosApp.competicaoFiltro === 'todos' || p.campeonato === dadosApp.competicaoFiltro);
-
-            if (lista.length === 0) {
-                container.innerHTML = `<div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center text-xs text-slate-400">Nenhuma partida cadastrada para este torneio.</div>`;
+            if (dadosApp.partidas.length === 0) {
+                container.innerHTML = `<div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center text-xs text-slate-400">Nenhuma partida cadastrada na rodada.</div>`;
                 return;
             }
 
-            lista.forEach(p => {
+            dadosApp.partidas.forEach(p => {
                 if (!dadosApp.palpites[user][p.id]) dadosApp.palpites[user][p.id] = { casa: 0, visitante: 0 };
                 const pal = dadosApp.palpites[user][p.id];
                 const enc = p.placarOficialCasa !== null && p.placarOficialVisitante !== null;
@@ -447,13 +424,13 @@
                 card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3";
                 card.innerHTML = `
                     <div class="flex justify-between items-center text-[11px]">
-                        <span class="bg-emerald-500/10 text-emerald-400 font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/20">${p.campeonato}</span>
+                        <span class="bg-emerald-500/10 text-emerald-400 font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/20"><i class="fa-solid fa-trophy mr-1"></i>${p.campeonato}</span>
                         <span class="text-slate-400">${enc ? '<span class="text-amber-400 font-bold">Final: '+p.placarOficialCasa+'x'+p.placarOficialVisitante+'</span>' : p.data}</span>
                     </div>
                     <div class="flex items-center justify-between gap-2">
                         <div class="flex items-center gap-2 w-2/5 justify-end text-right">
                             <span class="text-xs font-bold text-white leading-tight">${p.casa}</span>
-                            <img src="${p.escudoCasa}" onerror="this.src='${ESCUDO_PADRAO}'" class="w-8 h-8 object-contain flex-shrink-0">
+                            <img src="${p.escudoCasa}" onerror="this.src='${gerarEscudoVetorial(p.casa)}'" class="w-8 h-8 object-contain flex-shrink-0">
                         </div>
                         <div class="flex items-center gap-1.5 w-1/5 justify-center">
                             <input type="number" min="0" max="20" value="${pal.casa}" onchange="atualizarPalpite(${p.id}, 'casa', this.value)" class="w-10 h-10 bg-slate-800 border border-slate-700 text-center text-white font-black text-sm rounded-xl">
@@ -461,7 +438,7 @@
                             <input type="number" min="0" max="20" value="${pal.visitante}" onchange="atualizarPalpite(${p.id}, 'visitante', this.value)" class="w-10 h-10 bg-slate-800 border border-slate-700 text-center text-white font-black text-sm rounded-xl">
                         </div>
                         <div class="flex items-center gap-2 w-2/5 justify-start text-left">
-                            <img src="${p.escudoVisitante}" onerror="this.src='${ESCUDO_PADRAO}'" class="w-8 h-8 object-contain flex-shrink-0">
+                            <img src="${p.escudoVisitante}" onerror="this.src='${gerarEscudoVetorial(p.visitante)}'" class="w-8 h-8 object-contain flex-shrink-0">
                             <span class="text-xs font-bold text-white leading-tight">${p.visitante}</span>
                         </div>
                     </div>
@@ -485,7 +462,7 @@
             let txt = `🏆 *BOLÃO DOS AMIGOS* 🏆\n👤 Participante: *${user}*\n\n⚽ *Meus Palpites:*\n`;
             dadosApp.partidas.forEach(p => {
                 const pal = pals[p.id] || { casa: 0, visitante: 0 };
-                txt += `• ${p.casa} ${pal.casa} x ${pal.visitante} ${p.visitante}\n`;
+                txt += `• ${p.casa} ${pal.casa} x ${pal.visitante} ${p.visitante} (${p.campeonato})\n`;
             });
             txt += `\n🎯 *Regra:* 1 Pt por acerto de vencedor/empate!`;
             window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(txt), '_blank');
@@ -533,6 +510,74 @@
                 `;
                 tbody.appendChild(tr);
             });
+        }
+
+        // Gestão de Torneios (Adicionar, Editar e Apagar) no Admin
+        function renderizarAdminTorneios() {
+            const container = document.getElementById('lista-admin-torneios');
+            if (!container) return;
+            container.innerHTML = '';
+            if (dadosApp.torneios.length === 0) {
+                container.innerHTML = `<p class="text-[11px] text-slate-500 text-center py-1">Nenhum torneio cadastrado.</p>`;
+                return;
+            }
+            dadosApp.torneios.forEach(torneio => {
+                const item = document.createElement('div');
+                item.className = "flex justify-between items-center bg-slate-800/60 px-3 py-1.5 rounded-lg border border-slate-700/50 text-xs";
+                item.innerHTML = `
+                    <span class="font-semibold text-white">${torneio}</span>
+                    <div class="flex gap-1">
+                        <button type="button" onclick="editarTorneio('${torneio}')" class="text-amber-400 hover:text-amber-300 text-[11px] font-bold px-2 py-1 rounded transition"><i class="fa-solid fa-pen mr-1"></i> Editar</button>
+                        <button type="button" onclick="removerTorneio('${torneio}')" class="text-red-400 hover:text-red-300 text-[11px] font-bold px-2 py-1 rounded transition"><i class="fa-solid fa-trash mr-1"></i> Apagar</button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function adicionarTorneio() {
+            const input = document.getElementById('input-novo-torneio');
+            const nome = input.value.trim();
+            if (!nome) return alert("Digite o nome do torneio.");
+            if (dadosApp.torneios.includes(nome)) return alert("Este torneio já existe.");
+
+            dadosApp.torneios.push(nome);
+            salvarDados();
+            renderizarAdminTorneios();
+            atualizarSelectNovoJogoCampeonato();
+            input.value = '';
+            alert(`Torneio ${nome} criado com sucesso!`);
+        }
+
+        function editarTorneio(antigoNome) {
+            const novoNome = prompt(`Editar nome do torneio "${antigoNome}":`, antigoNome);
+            if (!novoNome || !novoNome.trim()) return;
+            const nomeLimpo = novoNome.trim();
+            if (dadosApp.torneios.includes(nomeLimpo)) return alert("Já existe um torneio com esse nome.");
+
+            const idx = dadosApp.torneios.indexOf(antigoNome);
+            if (idx !== -1) {
+                dadosApp.torneios[idx] = nomeLimpo;
+                // Atualiza também nas partidas cadastradas que usavam esse torneio
+                dadosApp.partidas.forEach(p => {
+                    if (p.campeonato === antigoNome) p.campeonato = nomeLimpo;
+                });
+                salvarDados();
+                renderizarAdminTorneios();
+                renderizarAdminPartidas();
+                atualizarSelectNovoJogoCampeonato();
+                alert("Torneio atualizado com sucesso!");
+            }
+        }
+
+        function removerTorneio(nome) {
+            if (!confirm(`Deseja realmente apagar o torneio "${nome}"?`)) return;
+            dadosApp.torneios = dadosApp.torneios.filter(t => t !== nome);
+            salvarDados();
+            renderizarAdminTorneios();
+            atualizarSelectNovoJogoCampeonato();
+            renderizarPalpites();
+            alert(`Torneio ${nome} removido.`);
         }
 
         function renderizarAdminPartidas() {
@@ -586,20 +631,6 @@
             });
         }
 
-        function adicionarTorneio() {
-            const input = document.getElementById('input-novo-torneio');
-            const nome = input.value.trim();
-            if (!nome) return alert("Digite o nome do torneio.");
-            if (dadosApp.torneios.includes(nome)) return alert("Este torneio já existe.");
-
-            dadosApp.torneios.push(nome);
-            salvarDados();
-            atualizarSelectNovoJogoCampeonato();
-            renderizarFiltros();
-            input.value = '';
-            alert(`Torneio ${nome} criado com sucesso!`);
-        }
-
         function salvarResultadoOficial(id) {
             const c = document.getElementById('admin-c-' + id).value;
             const v = document.getElementById('admin-v-' + id).value;
@@ -614,29 +645,20 @@
             }
         }
 
-        async function adicionarNovaPartida() {
+        function adicionarNovaPartida() {
             const casa = document.getElementById('novo-time-casa').value.trim();
             const vis = document.getElementById('novo-time-visitante').value.trim();
             const camp = document.getElementById('novo-campeonato').value;
             const data = document.getElementById('nova-data-jogo').value.trim() || "Em breve";
             if (!casa || !vis) return alert("Preencha os dois times.");
 
-            const btn = document.getElementById('btn-add-partida');
-            btn.disabled = true;
-            btn.textContent = "Buscando escudos oficiais...";
-
-            const [escudoCasa, escudoVisitante] = await Promise.all([
-                buscarEscudoAutomatico(casa),
-                buscarEscudoAutomatico(vis)
-            ]);
-
             const novoId = dadosApp.partidas.length > 0 ? Math.max(...dadosApp.partidas.map(p => p.id)) + 1 : 1;
             dadosApp.partidas.push({
                 id: novoId,
                 casa: casa,
-                escudoCasa: escudoCasa,
+                escudoCasa: obterEscudo(casa),
                 visitante: vis,
-                escudoVisitante: escudoVisitante,
+                escudoVisitante: obterEscudo(vis),
                 campeonato: camp,
                 data: data,
                 placarOficialCasa: null,
@@ -650,8 +672,6 @@
             document.getElementById('novo-time-casa').value = '';
             document.getElementById('novo-time-visitante').value = '';
             document.getElementById('nova-data-jogo').value = '';
-            btn.disabled = false;
-            btn.textContent = "Cadastrar Partida";
             alert("Partida cadastrada com sucesso!");
         }
 
@@ -747,7 +767,6 @@
         if (dadosApp.amigos.length > 0 && !dadosApp.usuarioAtivo) {
             dadosApp.usuarioAtivo = dadosApp.amigos[0];
         }
-        renderizarFiltros();
         popularSeletorUsuarios();
         atualizarPote();
         renderizarPalpites();
