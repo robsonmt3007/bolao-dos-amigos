@@ -57,4 +57,700 @@
 
         <!-- ABA 1: PALPITES -->
         <div id="tab-palpites" class="space-y-4">
-            <div class="bg-slate-900 border
+            <div class="bg-slate-900 border border-emerald-500/20 rounded-2xl p-4 shadow-xl flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-emerald-400 block mb-0.5">Pote Acumulado</span>
+                    <h2 class="text-2xl font-black text-white" id="info-pote">R$ 0,00</h2>
+                    <p class="text-[11px] text-slate-400" id="info-qtd-amigos">0 participantes (R$ 10,00 cada)</p>
+                </div>
+                <button type="button" onclick="abrirModalImportar()" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 text-xs font-bold px-3 py-2.5 rounded-xl transition flex items-center gap-1.5">
+                    <i class="fa-brands fa-whatsapp text-sm"></i> Importar Zap
+                </button>
+            </div>
+
+            <!-- Filtros de Competição Dinâmicos -->
+            <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar" id="container-filtros">
+                <!-- Gerado via JS -->
+            </div>
+
+            <div id="lista-partidas-palpites" class="space-y-3"></div>
+
+            <button type="button" onclick="gerarComprovanteWhatsApp()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 px-4 rounded-xl transition flex items-center justify-center gap-2 shadow-lg">
+                <i class="fa-brands fa-whatsapp text-lg"></i> Enviar Meu Palpite no WhatsApp
+            </button>
+        </div>
+
+        <!-- ABA 2: RANKING -->
+        <div id="tab-ranking" class="space-y-4 hidden">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-ranking-star text-emerald-400"></i> Classificação Oficial
+                    </h2>
+                    <select id="filtro-ranking-comp" onchange="atualizarRanking()" class="bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded-lg px-2 py-1">
+                        <!-- Preenchido via JS -->
+                    </select>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-slate-400">
+                                <th class="py-2.5 px-2 text-center">#</th>
+                                <th class="py-2.5 px-2">Participante</th>
+                                <th class="py-2.5 px-2 text-center">Jogos</th>
+                                <th class="py-2.5 px-2 text-center">Acertos</th>
+                                <th class="py-2.5 px-2 text-right">Pts</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-ranking-corpo" class="divide-y divide-slate-800/60"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA 3: REGRAS & PIX -->
+        <div id="tab-regras" class="space-y-4 hidden">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+                <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-circle-info text-emerald-400"></i> Regulamento Oficial
+                </h2>
+                <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+                    <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-800">
+                        <strong class="text-white block mb-1">✅ Regra Única (1 Ponto por Acerto)</strong>
+                        Acertou quem venceu a partida ou acertou que deu empate — independentemente do placar exato — você ganha <strong>1 ponto</strong>.
+                    </div>
+                    <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-800">
+                        <strong class="text-white block mb-1">⚖️ Critérios de Desempate</strong>
+                        1. Maior número de acertos totais.<br>
+                        2. Ordem de envio do comprovante no WhatsApp.
+                    </div>
+                </div>
+                <div class="border-t border-slate-800 pt-4">
+                    <span class="text-xs font-bold text-white block mb-2">Chave Pix para Inscrição:</span>
+                    <div class="bg-slate-800 p-3 rounded-xl flex items-center justify-between">
+                        <span id="txt-pix" class="text-xs font-mono font-bold text-emerald-400">ritarxr@hotmail.com</span>
+                        <button type="button" onclick="copiarPix()" class="bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg">Copiar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA 4: ADMIN (COM SENHA) -->
+        <div id="tab-admin" class="space-y-4 hidden">
+            <!-- Tela de Login do Admin -->
+            <div id="admin-login-box" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl text-center space-y-4">
+                <div class="w-12 h-12 bg-emerald-600/20 border border-emerald-500/30 rounded-full flex items-center justify-center mx-auto text-emerald-400 text-xl">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-white">Área Restrita do Administrador</h3>
+                    <p class="text-xs text-slate-400 mt-1">Digite a senha para gerenciar torneios, participantes e partidas.</p>
+                </div>
+                <div class="max-w-xs mx-auto space-y-2">
+                    <input type="password" id="admin-senha-input" placeholder="Senha de acesso..." class="w-full bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2.5 text-center text-white focus:outline-none focus:border-emerald-500">
+                    <button type="button" onclick="validarSenhaAdmin()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 rounded-xl transition shadow">Entrar no Painel</button>
+                </div>
+            </div>
+
+            <!-- Conteúdo Protegido do Admin -->
+            <div id="admin-painel-conteudo" class="space-y-4 hidden">
+                <!-- Lançar Placares -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                        <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-whistle text-emerald-400"></i> Lançar Placares Oficiais
+                        </h2>
+                        <button type="button" onclick="sairAdmin()" class="text-[10px] text-red-400 hover:underline font-bold">Sair / Bloquear</button>
+                    </div>
+                    <div id="lista-admin-partidas" class="space-y-2.5"></div>
+                </div>
+
+                <!-- Adicionar Novo Torneio / Campeonato -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+                    <h3 class="text-xs font-bold text-white flex items-center gap-1.5"><i class="fa-solid fa-trophy text-emerald-400"></i> Adicionar Novo Torneio</h3>
+                    <div class="flex gap-2">
+                        <input type="text" id="input-novo-torneio" placeholder="Nome do torneio (ex: Paulistão)..." class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 flex-grow text-white">
+                        <button type="button" onclick="adicionarTorneio()" class="bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-xl">Criar</button>
+                    </div>
+                </div>
+
+                <!-- Adicionar Nova Partida -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+                    <h3 class="text-xs font-bold text-white flex items-center gap-1.5"><i class="fa-solid fa-futbol text-emerald-400"></i> Adicionar Nova Partida</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" id="novo-time-casa" placeholder="Time Casa (ex: Vasco)" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-white">
+                        <input type="text" id="novo-time-visitante" placeholder="Visitante (ex: Grêmio)" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-white">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <select id="novo-campeonato" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-white">
+                            <!-- Preenchido via JS -->
+                        </select>
+                        <input type="text" id="nova-data-jogo" placeholder="Data/Hora (ex: 25/11 • 21:30)" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-white">
+                    </div>
+                    <button type="button" id="btn-add-partida" onclick="adicionarNovaPartida()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 rounded-xl transition">Cadastrar Partida</button>
+                </div>
+
+                <!-- Gestão de Participantes (Inserir e Apagar) -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+                    <h3 class="text-xs font-bold text-white flex items-center gap-1.5"><i class="fa-solid fa-users text-emerald-400"></i> Gerenciar Participantes</h3>
+                    <div class="flex gap-2">
+                        <input type="text" id="input-novo-amigo" placeholder="Nome do participante..." class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 flex-grow text-white">
+                        <button type="button" onclick="adicionarAmigo()" class="bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-xl">Adicionar</button>
+                    </div>
+                    <!-- Lista com botão de apagar -->
+                    <div id="lista-admin-amigos" class="space-y-1.5 pt-2 border-t border-slate-800 max-h-40 overflow-y-auto">
+                        <!-- Preenchido via JS -->
+                    </div>
+                    <div class="pt-2 border-t border-slate-800 flex justify-between items-center">
+                        <span class="text-[11px] text-slate-500">Resetar dados completos:</span>
+                        <button type="button" onclick="resetarTudo()" class="text-[11px] text-red-400 font-semibold">Limpar Tudo</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL WHATSAPP -->
+    <div id="modal-importar" class="fixed inset-0 bg-slate-950/80 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-5 space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-sm font-bold text-white">Importar Palpite do WhatsApp</h3>
+                <button type="button" onclick="fecharModalImportar()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <textarea id="textarea-whatsapp" rows="5" placeholder="Cole aqui a mensagem do comprovante..." class="w-full bg-slate-800 border border-slate-700 text-xs text-slate-200 rounded-xl p-3"></textarea>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="fecharModalImportar()" class="bg-slate-800 text-slate-300 text-xs font-bold px-4 py-2 rounded-xl">Cancelar</button>
+                <button type="button" onclick="processarImportacaoWhatsApp()" class="bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-xl">Importar</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-slate-900 border-t border-slate-800 py-3 text-center text-[10px] text-slate-500">
+        Bolão dos Amigos • 1 Ponto por Acerto de Vencedor ou Empate
+    </footer>
+
+    <script>
+        const SENHA_ADMIN = "1234";
+        let adminLogado = false;
+
+        const ESCUDO_PADRAO = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310B981'><path d='M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm0 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z'/></svg>";
+        
+        const MAPA_ESCUDOS = {
+            "real madrid": "https://upload.wikimedia.org/wikipedia/en/5/56/Real_Madrid_CF.svg",
+            "barcelona": "https://upload.wikimedia.org/wikipedia/en/4/47/FC_Barcelona_%28crest%29.svg",
+            "manchester city": "https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg",
+            "liverpool": "https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg",
+            "flamengo": "https://upload.wikimedia.org/wikipedia/commons/2/2e/Flamengo_braz_logo.svg",
+            "palmeiras": "https://upload.wikimedia.org/wikipedia/commons/1/10/Palmeiras_logo.svg",
+            "são paulo": "https://upload.wikimedia.org/wikipedia/commons/6/6f/Brasao_do_Sao_Paulo_Futebol_Clube.svg",
+            "sao paulo": "https://upload.wikimedia.org/wikipedia/commons/6/6f/Brasao_do_Sao_Paulo_Futebol_Clube.svg",
+            "corinthians": "https://upload.wikimedia.org/wikipedia/pt/b/b4/Corinthians_simbolo.png",
+            "botafogo": "https://upload.wikimedia.org/wikipedia/commons/5/52/Botafogo_de_Futebol_e_Regatas_logo.svg",
+            "fluminense": "https://upload.wikimedia.org/wikipedia/commons/a/ad/Fluminense_FC_escudo.png",
+            "vasco": "https://upload.wikimedia.org/wikipedia/pt/a/ac/CRVascodaGama.png",
+            "grêmio": "https://upload.wikimedia.org/wikipedia/commons/0/08/Gremio_logo.svg",
+            "gremio": "https://upload.wikimedia.org/wikipedia/commons/0/08/Gremio_logo.svg",
+            "internacional": "https://upload.wikimedia.org/wikipedia/commons/f/f1/Escudo_do_Sport_Club_Internacional.svg",
+            "fortaleza": "https://upload.wikimedia.org/wikipedia/commons/e/e9/Fortaleza_EC_2018.png",
+            "ceará": "https://upload.wikimedia.org/wikipedia/commons/3/38/Cear%C3%A1_Sporting_Club_logo.svg",
+            "ceara": "https://upload.wikimedia.org/wikipedia/commons/3/38/Cear%C3%A1_Sporting_Club_logo.svg"
+        };
+
+        async function buscarEscudoAutomatico(nomeTime) {
+            const chave = nomeTime.trim().toLowerCase();
+            if (MAPA_ESCUDOS[chave]) return MAPA_ESCUDOS[chave];
+            try {
+                const resp = await fetch(`https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${encodeURIComponent(nomeTime.trim())}`);
+                const dados = await resp.json();
+                if (dados && dados.teams && dados.teams.length > 0 && dados.teams[0].strBadge) {
+                    return dados.teams[0].strBadge;
+                }
+            } catch (e) {}
+            return ESCUDO_PADRAO;
+        }
+
+        const DADOS_PADRAO = {
+            usuarioAtivo: "",
+            amigos: [],
+            torneios: ["Champions League", "Libertadores", "Brasileirão", "Premier League"],
+            competicaoFiltro: "todos",
+            partidas: [
+                { id: 1, casa: "Real Madrid", escudoCasa: MAPA_ESCUDOS["real madrid"], visitante: "Barcelona", escudoVisitante: MAPA_ESCUDOS["barcelona"], campeonato: "Champions League", data: "19/11 • 17:00", placarOficialCasa: null, placarOficialVisitante: null },
+                { id: 2, casa: "Manchester City", escudoCasa: MAPA_ESCUDOS["manchester city"], visitante: "Liverpool", escudoVisitante: MAPA_ESCUDOS["liverpool"], campeonato: "Premier League", data: "20/11 • 15:30", placarOficialCasa: null, placarOficialVisitante: null },
+                { id: 3, casa: "Flamengo", escudoCasa: MAPA_ESCUDOS["flamengo"], visitante: "Palmeiras", escudoVisitante: MAPA_ESCUDOS["palmeiras"], campeonato: "Libertadores", data: "21/11 • 21:30", placarOficialCasa: null, placarOficialVisitante: null },
+                { id: 4, casa: "Fortaleza", escudoCasa: MAPA_ESCUDOS["fortaleza"], visitante: "Botafogo", escudoVisitante: MAPA_ESCUDOS["botafogo"], campeonato: "Brasileirão", data: "22/11 • 19:00", placarOficialCasa: null, placarOficialVisitante: null }
+            ],
+            palpites: {}
+        };
+
+        let dadosApp = JSON.parse(JSON.stringify(DADOS_PADRAO));
+        const salvo = localStorage.getItem('bolao_amigos_v4');
+        if (salvo) {
+            try { dadosApp = JSON.parse(salvo); } catch(e) {}
+        }
+
+        function salvarDados() {
+            localStorage.setItem('bolao_amigos_v4', JSON.stringify(dadosApp));
+            atualizarPote();
+        }
+
+        function mudarAba(aba) {
+            ['palpites', 'ranking', 'regras', 'admin'].forEach(a => {
+                const painel = document.getElementById('tab-' + a);
+                const botao = document.getElementById('tab-btn-' + a);
+                if (painel) painel.classList.add('hidden');
+                if (botao) botao.className = "py-2.5 rounded-lg transition flex flex-col items-center gap-1 text-slate-400 hover:text-white";
+            });
+            const painelAtivo = document.getElementById('tab-' + aba);
+            const botaoAtivo = document.getElementById('tab-btn-' + aba);
+            if (painelAtivo) painelAtivo.classList.remove('hidden');
+            if (botaoAtivo) botaoAtivo.className = "py-2.5 rounded-lg transition flex flex-col items-center gap-1 bg-emerald-600 text-white shadow";
+
+            if (aba === 'ranking') { atualizarSelectRankingComp(); atualizarRanking(); }
+            if (aba === 'admin') checarAdminEstado();
+            if (aba === 'palpites') renderizarFiltros();
+        }
+
+        function validarSenhaAdmin() {
+            const senha = document.getElementById('admin-senha-input').value;
+            if (senha === SENHA_ADMIN) {
+                adminLogado = true;
+                document.getElementById('admin-senha-input').value = '';
+                checarAdminEstado();
+            } else {
+                alert("Senha incorreta!");
+            }
+        }
+
+        function sairAdmin() {
+            adminLogado = false;
+            checarAdminEstado();
+        }
+
+        function checarAdminEstado() {
+            const loginBox = document.getElementById('admin-login-box');
+            const painelConteudo = document.getElementById('admin-painel-conteudo');
+            if (adminLogado) {
+                loginBox.classList.add('hidden');
+                painelConteudo.classList.remove('hidden');
+                renderizarAdminPartidas();
+                renderizarAdminAmigos();
+                atualizarSelectNovoJogoCampeonato();
+            } else {
+                loginBox.classList.remove('hidden');
+                painelConteudo.classList.add('hidden');
+            }
+        }
+
+        function atualizarPote() {
+            const qtd = dadosApp.amigos.length;
+            document.getElementById('info-pote').textContent = 'R$ ' + (qtd * 10).toFixed(2).replace('.', ',');
+            document.getElementById('info-qtd-amigos').textContent = qtd + ' participantes (R$ 10,00 cada)';
+        }
+
+        function popularSeletorUsuarios() {
+            const select = document.getElementById('select-usuario');
+            select.innerHTML = '';
+            if (dadosApp.amigos.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = "";
+                opt.textContent = "Nenhum participante cadastrado";
+                select.appendChild(opt);
+                return;
+            }
+            dadosApp.amigos.forEach(amigo => {
+                const opt = document.createElement('option');
+                opt.value = amigo;
+                opt.textContent = amigo;
+                if (amigo === dadosApp.usuarioAtivo) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        function mudarUsuarioAtivo(novo) {
+            dadosApp.usuarioAtivo = novo;
+            salvarDados();
+            renderizarPalpites();
+        }
+
+        // Renderizar Filtros de Torneios dinamicamente
+        function renderizarFiltros() {
+            const container = document.getElementById('container-filtros');
+            container.innerHTML = '';
+
+            // Botão "Todos"
+            const btnTodos = document.createElement('button');
+            btnTodos.type = "button";
+            btnTodos.className = `filtro-comp px-3 py-1.5 rounded-lg ${dadosApp.competicaoFiltro === 'todos' ? 'bg-emerald-600 text-white font-semibold' : 'bg-slate-800 text-slate-300'} whitespace-nowrap`;
+            btnTodos.textContent = "Todos";
+            btnTodos.onclick = () => filtrarCompeticao('todos', btnTodos);
+            container.appendChild(btnTodos);
+
+            dadosApp.torneios.forEach(t => {
+                const btn = document.createElement('button');
+                btn.type = "button";
+                btn.className = `filtro-comp px-3 py-1.5 rounded-lg ${dadosApp.competicaoFiltro === t ? 'bg-emerald-600 text-white font-semibold' : 'bg-slate-800 text-slate-300'} whitespace-nowrap`;
+                btn.textContent = t;
+                btn.onclick = () => filtrarCompeticao(t, btn);
+                container.appendChild(btn);
+            });
+        }
+
+        function filtrarCompeticao(comp, btn) {
+            dadosApp.competicaoFiltro = comp;
+            renderizarFiltros();
+            renderizarPalpites();
+        }
+
+        function atualizarSelectRankingComp() {
+            const select = document.getElementById('filtro-ranking-comp');
+            select.innerHTML = `<option value="todos">Geral (Todos)</option>`;
+            dadosApp.torneios.forEach(t => {
+                select.innerHTML += `<option value="${t}">${t}</option>`;
+            });
+        }
+
+        function atualizarSelectNovoJogoCampeonato() {
+            const select = document.getElementById('novo-campeonato');
+            select.innerHTML = '';
+            dadosApp.torneios.forEach(t => {
+                select.innerHTML += `<option value="${t}">${t}</option>`;
+            });
+        }
+
+        function renderizarPalpites() {
+            const container = document.getElementById('lista-partidas-palpites');
+            container.innerHTML = '';
+            const user = dadosApp.usuarioAtivo;
+
+            if (!user || dadosApp.amigos.length === 0) {
+                container.innerHTML = `<div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center text-xs text-slate-400">Nenhum participante cadastrado. Vá na aba <strong class="text-emerald-400">Admin</strong> para adicionar os nomes dos participantes.</div>`;
+                return;
+            }
+
+            if (!dadosApp.palpites[user]) dadosApp.palpites[user] = {};
+
+            const lista = dadosApp.partidas.filter(p => dadosApp.competicaoFiltro === 'todos' || p.campeonato === dadosApp.competicaoFiltro);
+
+            if (lista.length === 0) {
+                container.innerHTML = `<div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center text-xs text-slate-400">Nenhuma partida cadastrada para este torneio.</div>`;
+                return;
+            }
+
+            lista.forEach(p => {
+                if (!dadosApp.palpites[user][p.id]) dadosApp.palpites[user][p.id] = { casa: 0, visitante: 0 };
+                const pal = dadosApp.palpites[user][p.id];
+                const enc = p.placarOficialCasa !== null && p.placarOficialVisitante !== null;
+
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3";
+                card.innerHTML = `
+                    <div class="flex justify-between items-center text-[11px]">
+                        <span class="bg-emerald-500/10 text-emerald-400 font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/20">${p.campeonato}</span>
+                        <span class="text-slate-400">${enc ? '<span class="text-amber-400 font-bold">Final: '+p.placarOficialCasa+'x'+p.placarOficialVisitante+'</span>' : p.data}</span>
+                    </div>
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2 w-2/5 justify-end text-right">
+                            <span class="text-xs font-bold text-white leading-tight">${p.casa}</span>
+                            <img src="${p.escudoCasa}" onerror="this.src='${ESCUDO_PADRAO}'" class="w-8 h-8 object-contain flex-shrink-0">
+                        </div>
+                        <div class="flex items-center gap-1.5 w-1/5 justify-center">
+                            <input type="number" min="0" max="20" value="${pal.casa}" onchange="atualizarPalpite(${p.id}, 'casa', this.value)" class="w-10 h-10 bg-slate-800 border border-slate-700 text-center text-white font-black text-sm rounded-xl">
+                            <span class="text-slate-500 font-bold">x</span>
+                            <input type="number" min="0" max="20" value="${pal.visitante}" onchange="atualizarPalpite(${p.id}, 'visitante', this.value)" class="w-10 h-10 bg-slate-800 border border-slate-700 text-center text-white font-black text-sm rounded-xl">
+                        </div>
+                        <div class="flex items-center gap-2 w-2/5 justify-start text-left">
+                            <img src="${p.escudoVisitante}" onerror="this.src='${ESCUDO_PADRAO}'" class="w-8 h-8 object-contain flex-shrink-0">
+                            <span class="text-xs font-bold text-white leading-tight">${p.visitante}</span>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function atualizarPalpite(id, campo, val) {
+            const user = dadosApp.usuarioAtivo;
+            if (!user) return alert("Selecione um participante no topo.");
+            if (!dadosApp.palpites[user][id]) dadosApp.palpites[user][id] = { casa: 0, visitante: 0 };
+            dadosApp.palpites[user][id][campo] = parseInt(val) || 0;
+            salvarDados();
+        }
+
+        function gerarComprovanteWhatsApp() {
+            const user = dadosApp.usuarioAtivo;
+            if (!user) return alert("Nenhum participante selecionado.");
+            const pals = dadosApp.palpites[user] || {};
+            let txt = `🏆 *BOLÃO DOS AMIGOS* 🏆\n👤 Participante: *${user}*\n\n⚽ *Meus Palpites:*\n`;
+            dadosApp.partidas.forEach(p => {
+                const pal = pals[p.id] || { casa: 0, visitante: 0 };
+                txt += `• ${p.casa} ${pal.casa} x ${pal.visitante} ${p.visitante}\n`;
+            });
+            txt += `\n🎯 *Regra:* 1 Pt por acerto de vencedor/empate!`;
+            window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(txt), '_blank');
+        }
+
+        function calcularPontosUsuario(amigo, filtro = 'todos') {
+            let pts = 0, acertos = 0, jogos = 0;
+            const pals = dadosApp.palpites[amigo] || {};
+            dadosApp.partidas.forEach(p => {
+                if (filtro !== 'todos' && p.campeonato !== filtro) return;
+                if (p.placarOficialCasa !== null && p.placarOficialVisitante !== null) {
+                    jogos++;
+                    const pal = pals[p.id];
+                    if (pal) {
+                        const rOf = p.placarOficialCasa > p.placarOficialVisitante ? 'C' : (p.placarOficialCasa < p.placarOficialVisitante ? 'V' : 'E');
+                        const rPal = pal.casa > pal.visitante ? 'C' : (pal.casa < pal.visitante ? 'V' : 'E');
+                        if (rOf === rPal) { pts++; acertos++; }
+                    }
+                }
+            });
+            return { pontos: pts, acertos: acertos, jogos: jogos };
+        }
+
+        function atualizarRanking() {
+            const tbody = document.getElementById('tabela-ranking-corpo');
+            tbody.innerHTML = '';
+            const filtro = document.getElementById('filtro-ranking-comp').value;
+            const lista = dadosApp.amigos.map(a => ({ nome: a, ...calcularPontosUsuario(a, filtro) }));
+            lista.sort((a, b) => b.pontos - a.pontos || b.acertos - a.acertos);
+
+            if (lista.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-slate-500">Nenhum participante no ranking.</td></tr>`;
+                return;
+            }
+
+            lista.forEach((item, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="py-3 px-2 text-center font-bold text-slate-400">${idx + 1}º</td>
+                    <td class="py-3 px-2 font-semibold text-white">${item.nome}</td>
+                    <td class="py-3 px-2 text-center text-slate-400">${item.jogos}</td>
+                    <td class="py-3 px-2 text-center text-emerald-400 font-bold">${item.acertos}</td>
+                    <td class="py-3 px-2 text-right font-black text-emerald-400 text-sm">${item.pontos}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderizarAdminPartidas() {
+            const container = document.getElementById('lista-admin-partidas');
+            container.innerHTML = '';
+            if (dadosApp.partidas.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-2">Nenhuma partida cadastrada.</p>`;
+                return;
+            }
+            dadosApp.partidas.forEach(p => {
+                const valC = p.placarOficialCasa !== null ? p.placarOficialCasa : '';
+                const valV = p.placarOficialVisitante !== null ? p.placarOficialVisitante : '';
+                const div = document.createElement('div');
+                div.className = "bg-slate-800 border border-slate-700 rounded-xl p-3 flex items-center justify-between gap-2";
+                div.innerHTML = `
+                    <div class="w-2/5 truncate">
+                        <span class="text-[10px] text-emerald-400 block font-bold">${p.campeonato}</span>
+                        <span class="text-xs font-semibold text-white">${p.casa} x ${p.visitante}</span>
+                    </div>
+                    <div class="flex items-center gap-1 w-2/5 justify-center">
+                        <input type="number" id="admin-c-${p.id}" value="${valC}" placeholder="-" class="w-9 h-9 bg-slate-900 border border-slate-700 text-center text-white font-bold text-xs rounded-lg">
+                        <span>x</span>
+                        <input type="number" id="admin-v-${p.id}" value="${valV}" placeholder="-" class="w-9 h-9 bg-slate-900 border border-slate-700 text-center text-white font-bold text-xs rounded-lg">
+                    </div>
+                    <div class="flex items-center gap-1 w-1/5 justify-end">
+                        <button type="button" onclick="salvarResultadoOficial(${p.id})" class="bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-2 rounded-lg">OK</button>
+                        <button type="button" onclick="removerPartida(${p.id})" class="bg-red-500/20 text-red-400 text-[10px] font-bold px-2 py-2 rounded-lg"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Gestão de Participantes no Admin (Inserir e Apagar)
+        function renderizarAdminAmigos() {
+            const container = document.getElementById('lista-admin-amigos');
+            container.innerHTML = '';
+            if (dadosApp.amigos.length === 0) {
+                container.innerHTML = `<p class="text-[11px] text-slate-500 text-center py-1">Nenhum participante.</p>`;
+                return;
+            }
+            dadosApp.amigos.forEach(amigo => {
+                const item = document.createElement('div');
+                item.className = "flex justify-between items-center bg-slate-800/60 px-3 py-1.5 rounded-lg border border-slate-700/50 text-xs";
+                item.innerHTML = `
+                    <span class="font-semibold text-white">${amigo}</span>
+                    <button type="button" onclick="removerAmigo('${amigo}')" class="text-red-400 hover:text-red-300 text-[11px] font-bold px-2 py-1 rounded transition"><i class="fa-solid fa-trash mr-1"></i> Apagar</button>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function adicionarTorneio() {
+            const input = document.getElementById('input-novo-torneio');
+            const nome = input.value.trim();
+            if (!nome) return alert("Digite o nome do torneio.");
+            if (dadosApp.torneios.includes(nome)) return alert("Este torneio já existe.");
+
+            dadosApp.torneios.push(nome);
+            salvarDados();
+            atualizarSelectNovoJogoCampeonato();
+            renderizarFiltros();
+            input.value = '';
+            alert(`Torneio ${nome} criado com sucesso!`);
+        }
+
+        function salvarResultadoOficial(id) {
+            const c = document.getElementById('admin-c-' + id).value;
+            const v = document.getElementById('admin-v-' + id).value;
+            const p = dadosApp.partidas.find(item => item.id === id);
+            if (p) {
+                p.placarOficialCasa = c !== '' ? parseInt(c) : null;
+                p.placarOficialVisitante = v !== '' ? parseInt(v) : null;
+                salvarDados();
+                atualizarRanking();
+                renderizarPalpites();
+                alert("Placar salvo e ranking recalculado!");
+            }
+        }
+
+        async function adicionarNovaPartida() {
+            const casa = document.getElementById('novo-time-casa').value.trim();
+            const vis = document.getElementById('novo-time-visitante').value.trim();
+            const camp = document.getElementById('novo-campeonato').value;
+            const data = document.getElementById('nova-data-jogo').value.trim() || "Em breve";
+            if (!casa || !vis) return alert("Preencha os dois times.");
+
+            const btn = document.getElementById('btn-add-partida');
+            btn.disabled = true;
+            btn.textContent = "Buscando escudos oficiais...";
+
+            const [escudoCasa, escudoVisitante] = await Promise.all([
+                buscarEscudoAutomatico(casa),
+                buscarEscudoAutomatico(vis)
+            ]);
+
+            const novoId = dadosApp.partidas.length > 0 ? Math.max(...dadosApp.partidas.map(p => p.id)) + 1 : 1;
+            dadosApp.partidas.push({
+                id: novoId,
+                casa: casa,
+                escudoCasa: escudoCasa,
+                visitante: vis,
+                escudoVisitante: escudoVisitante,
+                campeonato: camp,
+                data: data,
+                placarOficialCasa: null,
+                placarOficialVisitante: null
+            });
+
+            salvarDados();
+            renderizarAdminPartidas();
+            renderizarPalpites();
+
+            document.getElementById('novo-time-casa').value = '';
+            document.getElementById('novo-time-visitante').value = '';
+            document.getElementById('nova-data-jogo').value = '';
+            btn.disabled = false;
+            btn.textContent = "Cadastrar Partida";
+            alert("Partida cadastrada com sucesso!");
+        }
+
+        function removerPartida(id) {
+            if (!confirm("Remover jogo?")) return;
+            dadosApp.partidas = dadosApp.partidas.filter(p => p.id !== id);
+            salvarDados();
+            renderizarAdminPartidas();
+            renderizarPalpites();
+            atualizarRanking();
+        }
+
+        function adicionarAmigo() {
+            const inp = document.getElementById('input-novo-amigo');
+            const nome = inp.value.trim();
+            if (!nome || dadosApp.amigos.includes(nome)) return alert("Nome inválido ou já existe.");
+            dadosApp.amigos.push(nome);
+            dadosApp.palpites[nome] = {};
+            if (dadosApp.amigos.length === 1) dadosApp.usuarioAtivo = nome;
+            salvarDados();
+            popularSeletorUsuarios();
+            renderizarAdminAmigos();
+            atualizarRanking();
+            renderizarPalpites();
+            inp.value = '';
+            alert("Participante adicionado com sucesso!");
+        }
+
+        function removerAmigo(nome) {
+            if (!confirm(`Deseja realmente apagar o participante ${nome}?`)) return;
+            dadosApp.amigos = dadosApp.amigos.filter(a => a !== nome);
+            delete dadosApp.palpites[nome];
+            if (dadosApp.usuarioAtivo === nome) {
+                dadosApp.usuarioAtivo = dadosApp.amigos.length > 0 ? dadosApp.amigos[0] : "";
+            }
+            salvarDados();
+            popularSeletorUsuarios();
+            renderizarAdminAmigos();
+            atualizarRanking();
+            renderizarPalpites();
+            alert(`Participante ${nome} apagado.`);
+        }
+
+        function abrirModalImportar() { document.getElementById('modal-importar').classList.remove('hidden'); }
+        function fecharModalImportar() { document.getElementById('modal-importar').classList.add('hidden'); }
+
+        function processarImportacaoWhatsApp() {
+            const txt = document.getElementById('textarea-whatsapp').value;
+            if (!txt.trim()) return;
+            let nome = "Amigo Zap";
+            const mNome = txt.match(/Participante:\s*\*?([^\n\*]+)\*?/i);
+            if (mNome && mNome[1]) nome = mNome[1].trim();
+
+            if (!dadosApp.amigos.includes(nome)) {
+                dadosApp.amigos.push(nome);
+                popularSeletorUsuarios();
+                renderizarAdminAmigos();
+            }
+            if (!dadosApp.palpites[nome]) dadosApp.palpites[nome] = {};
+
+            txt.split('\n').forEach(linha => {
+                const mJogo = linha.match(/•\s*(.+?)\s+(\d+)\s*x\s*(\d+)/i);
+                if (mJogo) {
+                    const tCasa = mJogo[1].trim().toLowerCase();
+                    const pEnc = dadosApp.partidas.find(p => p.casa.toLowerCase().includes(tCasa));
+                    if (pEnc) {
+                        dadosApp.palpites[nome][pEnc.id] = { casa: parseInt(mJogo[2]), visitante: parseInt(mJogo[3]) };
+                    }
+                }
+            });
+
+            dadosApp.usuarioAtivo = nome;
+            salvarDados();
+            popularSeletorUsuarios();
+            renderizarPalpites();
+            atualizarRanking();
+            fecharModalImportar();
+            alert("Palpites de " + nome + " importados!");
+        }
+
+        function copiarPix() {
+            navigator.clipboard.writeText(document.getElementById('txt-pix').innerText);
+            alert("Chave Pix copiada!");
+        }
+
+        function resetarTudo() {
+            if (!confirm("Apagar tudo e limpar dados?")) return;
+            localStorage.removeItem('bolao_amigos_v4');
+            location.reload();
+        }
+
+        // Inicialização
+        if (dadosApp.amigos.length > 0 && !dadosApp.usuarioAtivo) {
+            dadosApp.usuarioAtivo = dadosApp.amigos[0];
+        }
+        renderizarFiltros();
+        popularSeletorUsuarios();
+        atualizarPote();
+        renderizarPalpites();
+        atualizarRanking();
+    </script>
+</body>
+</html>
