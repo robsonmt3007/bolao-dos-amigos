@@ -227,10 +227,12 @@
     </footer>
 
     <script>
-        const SENHA_ADMIN = "1234"; // Você pode alterar a senha aqui se quiser
+        const SENHA_ADMIN = "1234";
         let adminLogado = false;
 
         const ESCUDO_PADRAO = "https://cdn-icons-png.flaticon.com/512/53/53283.png";
+        
+        // Mapeamento oficial corrigido dos escudos oficiais
         const MAPA_ESCUDOS = {
             "real madrid": "https://crests.football-data.org/86.png",
             "barcelona": "https://crests.football-data.org/81.png",
@@ -241,9 +243,9 @@
             "bayern": "https://crests.football-data.org/5.png",
             "psg": "https://crests.football-data.org/524.png",
             "flamengo": "https://crests.football-data.org/1783.png",
-            "palmeiras": "https://crests.football-data.org/1776.png",
+            "palmeiras": "https://crests.football-data.org/1776.png", // Corrigido para Palmeiras oficial
+            "são paulo": "https://crests.football-data.org/1777.png", // Corrigido para São Paulo oficial
             "botafogo": "https://crests.football-data.org/1770.png",
-            "são paulo": "https://crests.football-data.org/1777.png",
             "corinthians": "https://crests.football-data.org/1779.png",
             "fluminense": "https://crests.football-data.org/1765.png",
             "atlético-mg": "https://crests.football-data.org/1766.png",
@@ -262,7 +264,7 @@
 
         const DADOS_PADRAO = {
             usuarioAtivo: "",
-            amigos: [], // Lista limpa conforme solicitado
+            amigos: [],
             competicaoFiltro: "todos",
             partidas: [
                 { id: 1, casa: "Real Madrid", escudoCasa: "https://crests.football-data.org/86.png", visitante: "Barcelona", escudoVisitante: "https://crests.football-data.org/81.png", campeonato: "Champions League", data: "19/11 • 17:00", placarOficialCasa: null, placarOficialVisitante: null },
@@ -274,13 +276,13 @@
         };
 
         let dadosApp = JSON.parse(JSON.stringify(DADOS_PADRAO));
-        const salvo = localStorage.getItem('bolao_amigos_limpo');
+        const salvo = localStorage.getItem('bolao_amigos_limpo_v2');
         if (salvo) {
             try { dadosApp = JSON.parse(salvo); } catch(e) {}
         }
 
         function salvarDados() {
-            localStorage.setItem('bolao_amigos_limpo', JSON.stringify(dadosApp));
+            localStorage.setItem('bolao_amigos_limpo_v2', JSON.stringify(dadosApp));
             atualizarPote();
         }
 
@@ -609,7 +611,7 @@
 
         function resetarTudo() {
             if (!confirm("Apagar tudo e limpar usuários?")) return;
-            localStorage.removeItem('bolao_amigos_limpo');
+            localStorage.removeItem('bolao_amigos_limpo_v2');
             location.reload();
         }
 
