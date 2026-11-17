@@ -174,10 +174,10 @@
                 </div>
 
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
-                    <h3 class="text-xs font-bold text-white">➕ Adicionar Nova Partida</h3>
+                    <h3 class="text-xs font-bold text-white">➕ Adicionar Nova Partida (Busca Automática de Escudos)</h3>
                     <div class="grid grid-cols-2 gap-2">
-                        <input type="text" id="novo-time-casa" placeholder="Time Casa (ex: Flamengo)" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-white">
-                        <input type="text" id="novo-time-visitante" placeholder="Visitante (ex: Palmeiras)" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-white">
+                        <input type="text" id="novo-time-casa" placeholder="Time Casa (ex: Vasco)" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-white">
+                        <input type="text" id="novo-time-visitante" placeholder="Visitante (ex: Grêmio)" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-white">
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <select id="novo-campeonato" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-white">
@@ -188,7 +188,7 @@
                         </select>
                         <input type="text" id="nova-data-jogo" placeholder="Data/Hora (ex: 25/11 • 21:30)" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-white">
                     </div>
-                    <button type="button" onclick="adicionarNovaPartida()" class="w-full bg-emerald-600 text-white text-xs font-bold py-2.5 rounded-xl">Cadastrar Partida</button>
+                    <button type="button" onclick="adicionarNovaPartida()" class="w-full bg-emerald-600 text-white text-xs font-bold py-2.5 rounded-xl">Cadastrar Partida com Escudo Automático</button>
                 </div>
 
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
@@ -232,7 +232,7 @@
 
         const ESCUDO_PADRAO = "https://cdn-icons-png.flaticon.com/512/53/53283.png";
         
-        // Mapeamento oficial corrigido dos escudos oficiais
+        // Base inteligente com os principais clubes mapeados e gerador automático via API pública para novos times
         const MAPA_ESCUDOS = {
             "real madrid": "https://crests.football-data.org/86.png",
             "barcelona": "https://crests.football-data.org/81.png",
@@ -243,8 +243,8 @@
             "bayern": "https://crests.football-data.org/5.png",
             "psg": "https://crests.football-data.org/524.png",
             "flamengo": "https://crests.football-data.org/1783.png",
-            "palmeiras": "https://crests.football-data.org/1776.png", // Corrigido para Palmeiras oficial
-            "são paulo": "https://crests.football-data.org/1777.png", // Corrigido para São Paulo oficial
+            "palmeiras": "https://crests.football-data.org/1776.png",
+            "são paulo": "https://crests.football-data.org/1777.png",
             "botafogo": "https://crests.football-data.org/1770.png",
             "corinthians": "https://crests.football-data.org/1779.png",
             "fluminense": "https://crests.football-data.org/1765.png",
@@ -252,14 +252,23 @@
             "cruzeiro": "https://crests.football-data.org/1771.png",
             "grêmio": "https://crests.football-data.org/1767.png",
             "internacional": "https://crests.football-data.org/1768.png",
+            "vasco": "https://crests.football-data.org/1780.png",
+            "bahia": "https://crests.football-data.org/1769.png",
             "fortaleza": "https://crests.football-data.org/3984.png",
             "ceará": "https://crests.football-data.org/1837.png",
             "river plate": "https://crests.football-data.org/1876.png",
             "boca juniors": "https://crests.football-data.org/1877.png"
         };
 
+        // Função que busca o escudo automaticamente (via base local ou API pública global de escudos)
         function obterEscudo(nome) {
-            return MAPA_ESCUDOS[nome.trim().toLowerCase()] || ESCUDO_PADRAO;
+            const chave = nome.trim().toLowerCase();
+            if (MAPA_ESCUDOS[chave]) {
+                return MAPA_ESCUDOS[chave];
+            }
+            // Se for um time novo não cadastrado, o app busca direto da API global pública de escudos pelo nome formatado
+            const nomeFormatado = encodeURIComponent(nome.trim());
+            return `https://api.sofascore.app/api/v1/team/${nomeFormatado}/image`;
         }
 
         const DADOS_PADRAO = {
@@ -276,13 +285,13 @@
         };
 
         let dadosApp = JSON.parse(JSON.stringify(DADOS_PADRAO));
-        const salvo = localStorage.getItem('bolao_amigos_limpo_v2');
+        const salvo = localStorage.getItem('bolao_amigos_api_escudos');
         if (salvo) {
             try { dadosApp = JSON.parse(salvo); } catch(e) {}
         }
 
         function salvarDados() {
-            localStorage.setItem('bolao_amigos_limpo_v2', JSON.stringify(dadosApp));
+            localStorage.setItem('bolao_amigos_api_escudos', JSON.stringify(dadosApp));
             atualizarPote();
         }
 
@@ -541,7 +550,7 @@
             document.getElementById('novo-time-casa').value = '';
             document.getElementById('novo-time-visitante').value = '';
             document.getElementById('nova-data-jogo').value = '';
-            alert("Partida cadastrada!");
+            alert("Partida cadastrada com escudos automáticos!");
         }
 
         function removerPartida(id) {
@@ -611,7 +620,7 @@
 
         function resetarTudo() {
             if (!confirm("Apagar tudo e limpar usuários?")) return;
-            localStorage.removeItem('bolao_amigos_limpo_v2');
+            localStorage.removeItem('bolao_amigos_api_escudos');
             location.reload();
         }
 
