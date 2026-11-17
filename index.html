@@ -37,10 +37,13 @@
     <!-- CONTEÚDO PRINCIPAL -->
     <main class="max-w-xl w-full mx-auto p-4 flex-grow pb-20">
 
-        <!-- ABAS DE NAVEGAÇÃO -->
-        <div class="grid grid-cols-4 gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl mb-5 text-center text-xs font-semibold">
+        <!-- ABAS DE NAVEGAÇÃO (5 Abas Agora) -->
+        <div class="grid grid-cols-5 gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl mb-5 text-center text-[11px] font-semibold">
             <button type="button" onclick="mudarAba('palpites')" id="tab-btn-palpites" class="py-2.5 rounded-lg transition flex flex-col items-center gap-1 bg-emerald-600 text-white shadow">
-                <i class="fa-solid fa-pen-to-square"></i> Palpites
+                <i class="fa-solid fa-pen-to-square"></i> Meu Jogo
+            </button>
+            <button type="button" onclick="mudarAba('ver-palpites')" id="tab-btn-ver-palpites" class="py-2.5 rounded-lg transition flex flex-col items-center gap-1 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-eye"></i> Palpites
             </button>
             <button type="button" onclick="mudarAba('ranking')" id="tab-btn-ranking" class="py-2.5 rounded-lg transition flex flex-col items-center gap-1 text-slate-400 hover:text-white">
                 <i class="fa-solid fa-medal"></i> Ranking
@@ -53,7 +56,7 @@
             </button>
         </div>
 
-        <!-- ABA 1: PALPITES (Escolha de Vencedor ou Empate) -->
+        <!-- ABA 1: MEUS PALPITES -->
         <div id="tab-palpites" class="space-y-4">
             <div class="bg-slate-900 border border-emerald-500/20 rounded-2xl p-4 shadow-xl flex items-center justify-between">
                 <div>
@@ -66,7 +69,6 @@
                 </button>
             </div>
 
-            <!-- Lista de Partidas -->
             <div id="lista-partidas-palpites" class="space-y-3"></div>
 
             <button type="button" onclick="gerarComprovanteWhatsApp()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 px-4 rounded-xl transition flex items-center justify-center gap-2 shadow-lg">
@@ -74,7 +76,21 @@
             </button>
         </div>
 
-        <!-- ABA 2: RANKING -->
+        <!-- ABA 2: VER PALPITES DOS PARTICIPANTES -->
+        <div id="tab-ver-palpites" class="space-y-4 hidden">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-eye text-emerald-400"></i> Conferir Palpites da Galera
+                    </h2>
+                    <select id="select-ver-amigo" onchange="renderizarVerPalpitesAmigo()" class="bg-slate-800 border border-slate-700 text-xs font-bold text-emerald-400 rounded-lg px-2.5 py-1.5 focus:outline-none">
+                    </select>
+                </div>
+                <div id="lista-ver-palpites-amigo" class="space-y-2.5 pt-2 border-t border-slate-800"></div>
+            </div>
+        </div>
+
+        <!-- ABA 3: RANKING -->
         <div id="tab-ranking" class="space-y-4 hidden">
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
                 <div class="flex justify-between items-center mb-3">
@@ -103,7 +119,7 @@
             </div>
         </div>
 
-        <!-- ABA 3: REGRAS & PIX -->
+        <!-- ABA 4: REGRAS & PIX -->
         <div id="tab-regras" class="space-y-4 hidden">
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
                 <h2 class="text-sm font-bold text-white flex items-center gap-2">
@@ -112,7 +128,7 @@
                 <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
                     <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-800">
                         <strong class="text-white block mb-1">✅ Regra Única (1 Ponto por Acerto)</strong>
-                        Escolha quem vence a partida (Time da Casa ou Visitante) ou se o jogo termina empatado. Acertou, ganha <strong>1 ponto</strong>!
+                        Escolha quem vence a partida (Time da Casa ou Visitante) ou se o jogo termina empatado. Acertou, ganha <strong>1 ponto</strong> de forma automática!
                     </div>
                     <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-800">
                         <strong class="text-white block mb-1">⚖️ Critérios de Desempate</strong>
@@ -130,7 +146,7 @@
             </div>
         </div>
 
-        <!-- ABA 4: ADMIN (COM SENHA) -->
+        <!-- ABA 5: ADMIN (COM SENHA) -->
         <div id="tab-admin" class="space-y-4 hidden">
             <!-- Tela de Login do Admin -->
             <div id="admin-login-box" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl text-center space-y-4">
@@ -149,15 +165,22 @@
 
             <!-- Conteúdo Protegido do Admin -->
             <div id="admin-painel-conteudo" class="space-y-4 hidden">
-                <!-- Lançar Resultados Oficiais (Vencedor ou Empate) -->
+                <!-- Lançar Resultados Oficiais -->
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
                     <div class="flex justify-between items-center border-b border-slate-800 pb-2">
                         <h2 class="text-sm font-bold text-white flex items-center gap-2">
-                            <i class="fa-solid fa-whistle text-emerald-400"></i> Lançar Resultado Oficial
+                            <i class="fa-solid fa-whistle text-emerald-400"></i> Lançar Resultado Oficial (Computa Automaticamente)
                         </h2>
                         <button type="button" onclick="sairAdmin()" class="text-[10px] text-red-400 hover:underline font-bold">Sair / Bloquear</button>
                     </div>
                     <div id="lista-admin-partidas" class="space-y-2.5"></div>
+                </div>
+
+                <!-- Botão para Zerar Ranking -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-2 text-center">
+                    <h3 class="text-xs font-bold text-amber-400">🏆 Fim da Rodada / Torneio</h3>
+                    <p class="text-[11px] text-slate-400">Zere a pontuação para iniciar uma nova rodada mantendo os participantes e jogos.</p>
+                    <button type="button" onclick="zerarRanking()" class="w-full bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold py-2.5 rounded-xl transition shadow">Zerar Ranking e Pontuações</button>
                 </div>
 
                 <!-- Gestão de Torneios -->
@@ -226,7 +249,6 @@
         const SENHA_ADMIN = "1234";
         let adminLogado = false;
 
-        // Gerador de escudo SVG blindado contra erros (nunca quebra)
         function gerarEscudoVetorial(nome) {
             const limpo = nome ? nome.trim() : "Time";
             const iniciais = limpo.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
@@ -286,7 +308,7 @@
         };
 
         let dadosApp = JSON.parse(JSON.stringify(DADOS_PADRAO));
-        const CHAVE_STORAGE = 'bolao_amigos_master_v7';
+        const CHAVE_STORAGE = 'bolao_amigos_master_v8';
         const salvo = localStorage.getItem(CHAVE_STORAGE);
         if (salvo) {
             try { dadosApp = JSON.parse(salvo); } catch(e) {}
@@ -298,7 +320,7 @@
         }
 
         function mudarAba(aba) {
-            ['palpites', 'ranking', 'regras', 'admin'].forEach(a => {
+            ['palpites', 'ver-palpites', 'ranking', 'regras', 'admin'].forEach(a => {
                 const painel = document.getElementById('tab-' + a);
                 const botao = document.getElementById('tab-btn-' + a);
                 if (painel) painel.classList.add('hidden');
@@ -312,6 +334,7 @@
             if (aba === 'ranking') { atualizarSelectRankingComp(); atualizarRanking(); }
             if (aba === 'admin') checarAdminEstado();
             if (aba === 'palpites') { renderizarPalpites(); }
+            if (aba === 'ver-palpites') { popularSelectVerAmigos(); renderizarVerPalpitesAmigo(); }
         }
 
         function validarSenhaAdmin() {
@@ -396,7 +419,59 @@
             });
         }
 
-        // Renderizar Palpites com botões de Vencedor ou Empate
+        function popularSelectVerAmigos() {
+            const select = document.getElementById('select-ver-amigo');
+            if (!select) return;
+            select.innerHTML = '';
+            if (dadosApp.amigos.length === 0) {
+                select.innerHTML = `<option value="">Nenhum participante</option>`;
+                return;
+            }
+            dadosApp.amigos.forEach(amigo => {
+                const opt = document.createElement('option');
+                opt.value = amigo;
+                opt.textContent = amigo;
+                if (amigo === dadosApp.usuarioAtivo) opt.selected = true;
+                select.appendChild(opt);
+            });
+            renderizarVerPalpitesAmigo();
+        }
+
+        function renderizarVerPalpitesAmigo() {
+            const select = document.getElementById('select-ver-amigo');
+            const container = document.getElementById('lista-ver-palpites-amigo');
+            if (!select || !container) return;
+            const amigo = select.value;
+            container.innerHTML = '';
+
+            if (!amigo || !dadosApp.palpites[amigo]) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">Nenhum palpite encontrado para este participante.</p>`;
+                return;
+            }
+
+            const pals = dadosApp.palpites[amigo];
+            dadosApp.partidas.forEach(p => {
+                const pal = pals[p.id];
+                let desc = "Não palpitou";
+                let badgeColor = "bg-slate-800 text-slate-400";
+                if (pal === 'C') { desc = `Vitória do ${p.casa}`; badgeColor = "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30"; }
+                else if (pal === 'E') { desc = "Empate"; badgeColor = "bg-amber-600/20 text-amber-400 border border-amber-500/30"; }
+                else if (pal === 'V') { desc = `Vitória do ${p.visitante}`; badgeColor = "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30"; }
+
+                const div = document.createElement('div');
+                div.className = "bg-slate-800/60 p-3 rounded-xl border border-slate-700/50 flex justify-between items-center text-xs";
+                div.innerHTML = `
+                    <div class="truncate pr-2">
+                        <span class="text-[10px] text-slate-400 block">${p.campeonato}</span>
+                        <span class="font-bold text-white">${p.casa} x ${p.visitante}</span>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-lg font-bold ${badgeColor} whitespace-nowrap">${desc}</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Renderizar Palpites do Usuário Ativo
         function renderizarPalpites() {
             const container = document.getElementById('lista-partidas-palpites');
             if (!container) return;
@@ -416,7 +491,7 @@
             }
 
             dadosApp.partidas.forEach(p => {
-                if (!dadosApp.palpites[user][p.id]) dadosApp.palpites[user][p.id] = ""; // 'C', 'E' ou 'V'
+                if (!dadosApp.palpites[user][p.id]) dadosApp.palpites[user][p.id] = "";
                 const palpiteAtual = dadosApp.palpites[user][p.id];
                 const enc = p.resultadoOficial !== null;
 
@@ -448,7 +523,6 @@
                             <span class="text-xs font-bold text-white leading-tight">${p.visitante}</span>
                         </div>
                     </div>
-                    <!-- Botões de Escolha: Vence Casa, Empate ou Vence Visitante -->
                     <div class="grid grid-cols-3 gap-1.5 pt-1">
                         <button type="button" onclick="salvarPalpite(${p.id}, 'C')" class="py-2 text-[11px] rounded-xl transition ${btnCasaClass}">${p.casa}</button>
                         <button type="button" onclick="salvarPalpite(${p.id}, 'E')" class="py-2 text-[11px] rounded-xl transition ${btnEmpateClass}">Empate</button>
@@ -474,7 +548,7 @@
             let txt = `🏆 *BOLÃO DOS AMIGOS* 🏆\n👤 Participante: *${user}*\n\n⚽ *Meus Palpites:*\n`;
             dadosApp.partidas.forEach(p => {
                 const pal = pals[p.id];
-                let desc = "Não palpitei";
+                let desc = "Não palpitou";
                 if (pal === 'C') desc = `Vitória do ${p.casa}`;
                 else if (pal === 'E') desc = "Empate";
                 else if (pal === 'V') desc = `Vitória do ${p.visitante}`;
@@ -593,7 +667,7 @@
             alert(`Torneio ${nome} removido.`);
         }
 
-        // Lançar resultado oficial no Admin (Vencedor ou Empate)
+        // Lançar resultado oficial e computar automaticamente
         function renderizarAdminPartidas() {
             const container = document.getElementById('lista-admin-partidas');
             if (!container) return;
@@ -630,8 +704,22 @@
                 salvarDados();
                 atualizarRanking();
                 renderizarAdminPartidas();
-                alert("Resultado oficial lançado e ranking recalculado!");
+                alert("Resultado oficial lançado! Pontuação computada automaticamente.");
             }
+        }
+
+        // Zerar o Ranking ao terminar a rodada
+        function zerarRanking() {
+            if (!confirm("Deseja zerar as pontuações e o ranking para iniciar uma nova rodada?")) return;
+            dadosApp.partidas.forEach(p => { p.resultadoOficial = null; });
+            Object.keys(dadosApp.palpites).forEach(amigo => {
+                dadosApp.palpites[amigo] = {};
+            });
+            salvarDados();
+            atualizarRanking();
+            renderizarAdminPartidas();
+            renderizarPalpites();
+            alert("Ranking e palpites zerados com sucesso para a nova rodada!");
         }
 
         function renderizarAdminAmigos() {
