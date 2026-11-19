@@ -323,7 +323,7 @@
         let abaAtual = 'palpites';
         let sincronizandoAgora = false;
 
-        const JSONBIN_MASTER_KEY = "$2a$10$aW.mUJ8nW0E9kjAyIY1KveHbcOXt9xBk1L5fjtTv88Dc2fCGDwH7m";
+        const JSONBIN_MASTER_KEY = "$2a$10$lxwiD.gEEta/Lok2tarCS.dpEhTq8bCxm1hCaZQq9jPTjWuH7Myye";
         const BIN_ID_FIXO = "6afe26f5ffd5d16053cce3f2";
         let JSONBIN_BIN_ID = BIN_ID_FIXO || localStorage.getItem('bolao_bin_id') || "";
 
@@ -377,11 +377,15 @@
             "santos": "https://raw.githubusercontent.com/leandro-santos/escudos-futebol-brasileiro/master/serie-a/santos.png"
         };
 
+        function escapeHtml(s) {
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
         function gerarEscudoVetorial(nome) {
             const limpo = nome ? nome.trim() : "Time";
             const chave = limpo.toLowerCase();
             const estilo = CORES_TIMES[chave] || { fundo: "#064e3b", faixa: "#10b981", texto: "#ffffff", sigla: limpo.substring(0, 3).toUpperCase() };
-            const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M15 10 H85 V50 C85 75 50 92 50 92 C50 92 15 75 15 50 Z' fill='${estilo.fundo}' stroke='${estilo.faixa}' stroke-width='6'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' fill='${estilo.texto}' font-size='26' font-family='sans-serif' font-weight='900'>${estilo.sigla}</text></svg>`;
+            const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M15 10 H85 V50 C85 75 50 92 50 92 C50 92 15 75 15 50 Z' fill='${estilo.fundo}' stroke='${estilo.faixa}' stroke-width='6'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' fill='${estilo.texto}' font-size='26' font-family='sans-serif' font-weight='900'>${escapeHtml(estilo.sigla)}</text></svg>`;
             return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
         }
 
@@ -451,20 +455,29 @@
             }
         }
 
+        // CORRIGIDO: preserva a seleção do usuário e só reconstrói se a lista mudou
         function popularSelectLoginUsuario() {
-            dadosApp = validarGarantiaAdmin(dadosApp);
             const select = document.getElementById('login-select-usuario');
             if (!select) return;
 
-            select.innerHTML = dadosApp.amigos.map(amigo => {
-                const label = amigo === "Admin" ? "Admin (Administrador)" : amigo;
-                return `<option value="${amigo}">${label}</option>`;
-            }).join('');
+            const lista = dadosApp.amigos;
+            const assinatura = lista.join('|');
+            const anterior = select.value;
 
-            if (usuarioLogado && dadosApp.amigos.includes(usuarioLogado)) {
+            if (select.dataset.assinatura === assinatura && select.options.length) return;
+
+            select.innerHTML = lista.map(amigo => {
+                const label = amigo === "Admin" ? "Admin (Administrador)" : amigo;
+                return `<option value="${escapeHtml(amigo)}">${escapeHtml(label)}</option>`;
+            }).join('');
+            select.dataset.assinatura = assinatura;
+
+            if (anterior && lista.includes(anterior)) {
+                select.value = anterior;
+            } else if (usuarioLogado && lista.includes(usuarioLogado)) {
                 select.value = usuarioLogado;
             } else {
-                select.value = "Admin";
+                select.value = lista[0] || "";
             }
         }
 
@@ -484,19 +497,20 @@
             }
         }
 
+        // CORRIGIDO: compara senha como texto, sem espaços extras
         function fazerLoginUsuario() {
             const select = document.getElementById('login-select-usuario');
             const inputSenha = document.getElementById('login-input-senha');
             const usuario = select ? select.value : "";
-            const senhaDigitada = inputSenha ? inputSenha.value : "";
-
-            dadosApp = validarGarantiaAdmin(dadosApp);
-            const senhaEsperada = dadosApp.senhasUsuarios[usuario] ?? (usuario === "Admin" ? SENHA_ADMIN : "");
+            const senhaDigitada = inputSenha ? inputSenha.value.trim() : "";
 
             if (!usuario) {
                 alert("Selecione um participante.");
                 return;
             }
+
+            dadosApp = validarGarantiaAdmin(dadosApp);
+            const senhaEsperada = String(dadosApp.senhasUsuarios[usuario] ?? (usuario === "Admin" ? SENHA_ADMIN : "")).trim();
 
             if (senhaDigitada !== senhaEsperada) {
                 alert("Senha incorreta!");
@@ -597,6 +611,8 @@
                     dadosApp = validarGarantiaAdmin(remoto);
                     salvarCacheLocal();
                     atualizarIndicadorStatus('online', 'Sincronizado na nuvem');
+                    // Reavalia o login: a lista de participantes pode ter mudado
+                    atualizarInterfaceLogin();
                     renderizarTudo();
                     if (mostrarAlerta) alert("Dados sincronizados com a nuvem!");
                 } else {
@@ -659,20 +675,20 @@
                 return `
                     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
                         <div class="flex justify-between items-center text-[10px] text-slate-400">
-                            <span class="font-bold text-emerald-400 uppercase">${partida.campeonato || 'Campeonato'}</span>
-                            <span>${partida.data || ''}</span>
+                            <span class="font-bold text-emerald-400 uppercase">${escapeHtml(partida.campeonato || 'Campeonato')}</span>
+                            <span>${escapeHtml(partida.data || '')}</span>
                         </div>
                         <div class="grid grid-cols-3 gap-2 text-xs">
                             <button type="button" onclick="registrarPalpite('${partida.id}', 'casa')" class="p-2.5 rounded-xl border transition flex flex-col items-center gap-1 ${btnClass('casa')}">
-                                <img src="${obterEscudo(partida.casa)}" alt="${partida.casa}" class="w-6 h-6 object-contain">
-                                <span class="truncate max-w-full">${partida.casa}</span>
+                                <img src="${obterEscudo(partida.casa)}" alt="${escapeHtml(partida.casa)}" class="w-6 h-6 object-contain">
+                                <span class="truncate max-w-full">${escapeHtml(partida.casa)}</span>
                             </button>
                             <button type="button" onclick="registrarPalpite('${partida.id}', 'empate')" class="p-2.5 rounded-xl border transition flex flex-col items-center justify-center ${btnClass('empate')}">
                                 <span>Empate</span>
                             </button>
                             <button type="button" onclick="registrarPalpite('${partida.id}', 'visitante')" class="p-2.5 rounded-xl border transition flex flex-col items-center gap-1 ${btnClass('visitante')}">
-                                <img src="${obterEscudo(partida.visitante)}" alt="${partida.visitante}" class="w-6 h-6 object-contain">
-                                <span class="truncate max-w-full">${partida.visitante}</span>
+                                <img src="${obterEscudo(partida.visitante)}" alt="${escapeHtml(partida.visitante)}" class="w-6 h-6 object-contain">
+                                <span class="truncate max-w-full">${escapeHtml(partida.visitante)}</span>
                             </button>
                         </div>
                     </div>
@@ -734,7 +750,7 @@
             const select = document.getElementById('select-ver-amigo');
             if (select) {
                 const anterior = select.value;
-                select.innerHTML = dadosApp.amigos.map(a => `<option value="${a}">${a}</option>`).join('');
+                select.innerHTML = dadosApp.amigos.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
                 if (anterior && dadosApp.amigos.includes(anterior)) {
                     select.value = anterior;
                 }
@@ -766,8 +782,8 @@
                 if (!esc) return '';
                 const textoEsc = esc === 'casa' ? p.casa : esc === 'visitante' ? p.visitante : 'Empate';
                 return `<div class="flex justify-between items-center text-xs bg-slate-800/60 px-3 py-2 rounded-xl">
-                    <span>${p.casa} x ${p.visitante}</span>
-                    <strong class="text-emerald-400">${textoEsc}</strong>
+                    <span>${escapeHtml(p.casa)} x ${escapeHtml(p.visitante)}</span>
+                    <strong class="text-emerald-400">${escapeHtml(textoEsc)}</strong>
                 </div>`;
             }).join('') || `<p class="text-xs text-slate-400">Sem palpites nas partidas atuais.</p>`;
         }
@@ -792,7 +808,7 @@
             if (filtroSelect) {
                 const atual = filtroSelect.value;
                 filtroSelect.innerHTML = `<option value="todos">Geral (Todos)</option>` +
-                    dadosApp.torneios.map(t => `<option value="${t}">${t}</option>`).join('');
+                    dadosApp.torneios.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
                 if ([...filtroSelect.options].some(o => o.value === atual)) filtroSelect.value = atual;
             }
 
@@ -814,7 +830,7 @@
             corpo.innerHTML = linhas.map((r, idx) => `
                 <tr>
                     <td class="py-2.5 px-2 text-center font-bold text-slate-400">${idx + 1}</td>
-                    <td class="py-2.5 px-2 font-semibold text-white">${r.nome}</td>
+                    <td class="py-2.5 px-2 font-semibold text-white">${escapeHtml(r.nome)}</td>
                     <td class="py-2.5 px-2 text-center text-slate-300">${r.jogos}</td>
                     <td class="py-2.5 px-2 text-center text-emerald-400 font-bold">${r.acertos}</td>
                     <td class="py-2.5 px-2 text-right font-black text-white">${r.pts}</td>
@@ -857,14 +873,14 @@
 
             const selectComp = document.getElementById('novo-campeonato');
             if (selectComp) {
-                selectComp.innerHTML = dadosApp.torneios.map(t => `<option value="${t}">${t}</option>`).join('');
+                selectComp.innerHTML = dadosApp.torneios.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
             }
 
             const listaTorneios = document.getElementById('lista-admin-torneios');
             if (listaTorneios) {
                 listaTorneios.innerHTML = dadosApp.torneios.map((t, i) => `
                     <div class="flex justify-between items-center text-xs bg-slate-800/60 px-3 py-1.5 rounded-lg">
-                        <span>${t}</span>
+                        <span>${escapeHtml(t)}</span>
                         <button type="button" onclick="removerTorneio(${i})" class="text-red-400 hover:underline text-[11px]">Remover</button>
                     </div>
                 `).join('');
@@ -875,26 +891,27 @@
                 listaPartidas.innerHTML = dadosApp.partidas.map(p => `
                     <div class="bg-slate-800/60 p-3 rounded-xl space-y-2 text-xs">
                         <div class="flex justify-between items-center">
-                            <span class="font-bold text-white">${p.casa} x ${p.visitante}</span>
+                            <span class="font-bold text-white">${escapeHtml(p.casa)} x ${escapeHtml(p.visitante)}</span>
                             <button type="button" onclick="removerPartida('${p.id}')" class="text-red-400 text-[11px]">Excluir</button>
                         </div>
                         <div class="flex gap-1.5">
                             ${['casa', 'empate', 'visitante'].map(op => {
                                 const rotulo = op === 'casa' ? p.casa : op === 'visitante' ? p.visitante : 'Empate';
                                 const ativo = p.resultado === op ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-slate-300';
-                                return `<button type="button" onclick="definirResultado('${p.id}', '${op}')" class="flex-1 py-1.5 rounded-lg font-bold text-[11px] ${ativo}">${rotulo}</button>`;
+                                return `<button type="button" onclick="definirResultado('${p.id}', '${op}')" class="flex-1 py-1.5 rounded-lg font-bold text-[11px] ${ativo}">${escapeHtml(rotulo)}</button>`;
                             }).join('')}
                         </div>
                     </div>
                 `).join('') || `<p class="text-xs text-slate-400">Nenhuma partida cadastrada.</p>`;
             }
 
+            // CORRIGIDO: remoção por índice, evita quebrar com apóstrofo no nome (ex.: D'Ávila)
             const listaAmigos = document.getElementById('lista-admin-amigos');
             if (listaAmigos) {
-                listaAmigos.innerHTML = dadosApp.amigos.map(nome => `
+                listaAmigos.innerHTML = dadosApp.amigos.map((nome, i) => `
                     <div class="flex justify-between items-center text-xs bg-slate-800/60 px-3 py-1.5 rounded-lg">
-                        <span><strong>${nome}</strong> <span class="text-slate-400 text-[10px]">(Senha: ${dadosApp.senhasUsuarios[nome] || '1234'})</span></span>
-                        ${nome !== "Admin" ? `<button type="button" onclick="removerAmigo('${nome}')" class="text-red-400 hover:underline text-[11px]">Remover</button>` : `<span class="text-[10px] text-emerald-400">Principal</span>`}
+                        <span><strong>${escapeHtml(nome)}</strong> <span class="text-slate-400 text-[10px]">(Senha: ${escapeHtml(dadosApp.senhasUsuarios[nome] || '1234')})</span></span>
+                        ${nome !== "Admin" ? `<button type="button" onclick="removerAmigoPorIndice(${i})" class="text-red-400 hover:underline text-[11px]">Remover</button>` : `<span class="text-[10px] text-emerald-400">Principal</span>`}
                     </div>
                 `).join('');
             }
@@ -1001,8 +1018,9 @@
             await salvarNuvem();
         }
 
-        async function removerAmigo(nome) {
-            if (nome === "Admin") return;
+        async function removerAmigoPorIndice(idx) {
+            const nome = dadosApp.amigos[idx];
+            if (!nome || nome === "Admin") return;
             dadosApp.amigos = dadosApp.amigos.filter(a => a !== nome);
             delete dadosApp.senhasUsuarios[nome];
             delete dadosApp.palpites[nome];
@@ -1017,6 +1035,8 @@
             localStorage.removeItem('bolao_usuario_logado');
             usuarioLogado = "";
             dadosApp = validarGarantiaAdmin(DADOS_PADRAO);
+            // Força a reconstrução do select de login
+            document.getElementById('login-select-usuario')?.removeAttribute('data-assinatura');
             atualizarInterfaceLogin();
             renderizarTudo();
             alert("Cache local limpo!");
@@ -1114,6 +1134,11 @@
         }
 
         window.addEventListener("DOMContentLoaded", () => {
+            // Permite entrar com a tecla Enter
+            document.getElementById('login-input-senha')?.addEventListener('keydown', e => {
+                if (e.key === 'Enter') fazerLoginUsuario();
+            });
+
             carregarCacheLocal();
             atualizarInterfaceLogin();
             renderizarTudo();
@@ -1122,3 +1147,4 @@
     </script>
 </body>
 </html>
+
