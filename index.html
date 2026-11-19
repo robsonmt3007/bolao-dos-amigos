@@ -318,12 +318,13 @@
     <script>
         const SENHA_ADMIN = "1234";
         const CACHE_LOCAL_KEY = "bolao_amigos_dados_v1";
+        const PENDENTE_KEY = "bolao_pendente_envio";
         let adminLogado = false;
         let verPalpitesLogado = false;
         let abaAtual = 'palpites';
         let sincronizandoAgora = false;
 
-        const JSONBIN_MASTER_KEY = "$2a$10$lxwiD.gEEta/Lok2tarCS.dpEhTq8bCxm1hCaZQq9jPTjWuH7Myye";
+        const JSONBIN_MASTER_KEY = "$2a$10$aW.mUJ8nW0E9kjAyIY1KveHbcOXt9xBk1L5fjtTv88Dc2fCGDwH7m";
         const BIN_ID_FIXO = "6afe26f5ffd5d16053cce3f2";
         let JSONBIN_BIN_ID = BIN_ID_FIXO || localStorage.getItem('bolao_bin_id') || "";
 
@@ -570,19 +571,26 @@
                 method: "GET",
                 headers: {
                     "X-Master-Key": JSONBIN_MASTER_KEY,
-                    "X-Bin-Meta": "false",
-                    "Cache-Control": "no-cache"
+                    "X-Bin-Meta": "false"
                 }
             });
-            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            if (!resp.ok) throw new Error(await detalheErroHttp(resp));
             const json = await resp.json();
             return json && json.record ? json.record : json;
+        }
+
+        async function detalheErroHttp(resp) {
+            let det = "";
+            try { det = (await resp.json()).message || ""; } catch (e) {}
+            return `HTTP ${resp.status} ${det}`.trim();
         }
 
         async function salvarNuvem() {
             dadosApp = validarGarantiaAdmin(dadosApp);
             salvarCacheLocal();
-            if (!JSONBIN_BIN_ID || !JSONBIN_MASTER_KEY) return;
+            // Marca que existem alterações locais ainda não enviadas à nuvem
+            localStorage.setItem(PENDENTE_KEY, "1");
+            if (!JSONBIN_BIN_ID || !JSONBIN_MASTER_KEY) return false;
 
             atualizarIndicadorStatus('sync', 'Salvando na nuvem...');
             try {
@@ -594,10 +602,14 @@
                     },
                     body: JSON.stringify(dadosApp)
                 });
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                if (!resp.ok) throw new Error(await detalheErroHttp(resp));
+                localStorage.removeItem(PENDENTE_KEY);
                 atualizarIndicadorStatus('online', 'Sincronizado na nuvem');
+                return true;
             } catch (err) {
-                atualizarIndicadorStatus('offline', 'Salvo localmente (sem rede)');
+                atualizarIndicadorStatus('offline', 'Falha ao salvar na nuvem');
+                alert("Não foi possível salvar na nuvem. A alteração ficou só neste aparelho.\n\nMotivo: " + err.message);
+                return false;
             }
         }
 
@@ -606,6 +618,13 @@
             sincronizandoAgora = true;
             atualizarIndicadorStatus('sync', 'Sincronizando...');
             try {
+                // Alterações locais pendentes têm prioridade: envia antes de baixar
+                if (localStorage.getItem(PENDENTE_KEY)) {
+                    const ok = await salvarNuvem();
+                    if (mostrarAlerta && ok) alert("Alterações locais enviadas para a nuvem!");
+                    renderizarTudo();
+                    return;
+                }
                 const remoto = await buscarNuvemSemCache();
                 if (remoto && typeof remoto === 'object') {
                     dadosApp = validarGarantiaAdmin(remoto);
@@ -619,8 +638,8 @@
                     atualizarIndicadorStatus('offline', 'Modo Local');
                 }
             } catch (err) {
-                atualizarIndicadorStatus('offline', 'Modo Local');
-                if (mostrarAlerta) alert("Não foi possível conectar à nuvem. Usando dados locais.");
+                atualizarIndicadorStatus('offline', 'Sem conexão com a nuvem');
+                if (mostrarAlerta) alert("Não foi possível conectar à nuvem. Usando dados locais.\n\nMotivo: " + err.message);
             } finally {
                 sincronizandoAgora = false;
             }
@@ -1032,6 +1051,7 @@
 
         function resetarCacheLocal() {
             localStorage.removeItem(CACHE_LOCAL_KEY);
+            localStorage.removeItem(PENDENTE_KEY);
             localStorage.removeItem('bolao_usuario_logado');
             usuarioLogado = "";
             dadosApp = validarGarantiaAdmin(DADOS_PADRAO);
@@ -1147,4 +1167,5 @@
     </script>
 </body>
 </html>
+
 
