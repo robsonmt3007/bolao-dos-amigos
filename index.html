@@ -111,7 +111,7 @@
             </button>
         </div>
 
-        <!-- ABA 2: VER PALPITES DOS PARTICIPANTES (RESTRITO ADMIN COM BOTÃO DE EXCLUIR PALPITE DO USUÁRIO) -->
+        <!-- ABA 2: VER PALPITES DOS PARTICIPANTES (RESTRITO ADMIN) -->
         <div id="tab-ver-palpites" class="space-y-4 hidden">
             <div id="ver-palpites-login-box" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl text-center space-y-4">
                 <div class="w-12 h-12 bg-emerald-600/20 border border-emerald-500/30 rounded-full flex items-center justify-center mx-auto text-emerald-400 text-xl">
@@ -321,7 +321,7 @@
         let verPalpitesLogado = false;
         let abaAtual = 'palpites';
         let sincronizandoAgora = false;
-
+      
         const JSONBIN_MASTER_KEY = "$2a$10$aW.mUJ8nW0E9kjAyIY1KveHbcOXt9xBk1L5fjtTv88Dc2fCGDwH7m"; 
         const BIN_ID_FIXO = "6afe26f5ffd5d16053cce3f2"; 
         let JSONBIN_BIN_ID = BIN_ID_FIXO || localStorage.getItem('bolao_bin_id') || ""; 
@@ -392,8 +392,8 @@
         }
 
         const DADOS_PADRAO = {
-            amigos: [],
-            senhasUsuarios: {},
+            amigos: ["Admin"],
+            senhasUsuarios: { "Admin": "1234" },
             torneios: ["Champions League", "Libertadores", "Brasileirão", "Premier League"],
             partidas: [],
             palpites: {},
@@ -401,6 +401,15 @@
         };
 
         let dadosApp = JSON.parse(JSON.stringify(DADOS_PADRAO));
+
+        function validarGarantiaAdmin(dados) {
+            if (!dados.amigos || !Array.isArray(dados.amigos) || dados.amigos.length === 0) {
+                dados.amigos = ["Admin"];
+                if (!dados.senhasUsuarios) dados.senhasUsuarios = {};
+                dados.senhasUsuarios["Admin"] = "1234";
+            }
+            return dados;
+        }
 
         function atualizarIndicadorStatus(estado, texto) {
             const dot = document.getElementById('status-nuvem');
@@ -452,9 +461,10 @@
                 if (JSONBIN_BIN_ID) {
                     const dadosNuvem = await buscarNuvemSemCache();
                     if (dadosNuvem) {
+                        validarGarantiaAdmin(dadosNuvem);
                         dadosApp = {
-                            amigos: Array.isArray(dadosNuvem.amigos) ? dadosNuvem.amigos : [],
-                            senhasUsuarios: dadosNuvem.senhasUsuarios || {},
+                            amigos: Array.isArray(dadosNuvem.amigos) ? dadosNuvem.amigos : ["Admin"],
+                            senhasUsuarios: dadosNuvem.senhasUsuarios || { "Admin": "1234" },
                             torneios: Array.isArray(dadosNuvem.torneios) ? dadosNuvem.torneios : DADOS_PADRAO.torneios,
                             partidas: Array.isArray(dadosNuvem.partidas) ? dadosNuvem.partidas : [],
                             palpites: dadosNuvem.palpites || {},
@@ -467,6 +477,7 @@
                     mutacaoCallback(dadosApp);
                 }
 
+                validarGarantiaAdmin(dadosApp);
                 localStorage.setItem('bolao_backup_local', JSON.stringify(dadosApp));
                 atualizarInterfaceCompleta();
 
@@ -517,14 +528,18 @@
             try {
                 if (!JSONBIN_BIN_ID) {
                     const salvoLocal = localStorage.getItem('bolao_backup_local');
-                    if (salvoLocal) dadosApp = JSON.parse(salvoLocal);
+                    if (salvoLocal) {
+                        try { dadosApp = JSON.parse(salvoLocal); } catch(e){}
+                    }
+                    validarGarantiaAdmin(dadosApp);
                     atualizarIndicadorStatus('online', 'Pronto');
                 } else {
                     const dadosNuvem = await buscarNuvemSemCache();
                     if (dadosNuvem) {
+                        validarGarantiaAdmin(dadosNuvem);
                         dadosApp = {
-                            amigos: Array.isArray(dadosNuvem.amigos) ? dadosNuvem.amigos : [],
-                            senhasUsuarios: dadosNuvem.senhasUsuarios || {},
+                            amigos: Array.isArray(dadosNuvem.amigos) ? dadosNuvem.amigos : ["Admin"],
+                            senhasUsuarios: dadosNuvem.senhasUsuarios || { "Admin": "1234" },
                             torneios: Array.isArray(dadosNuvem.torneios) ? dadosNuvem.torneios : DADOS_PADRAO.torneios,
                             partidas: Array.isArray(dadosNuvem.partidas) ? dadosNuvem.partidas : [],
                             palpites: dadosNuvem.palpites || {},
@@ -539,6 +554,7 @@
             } catch (e) {
                 const salvoLocal = localStorage.getItem('bolao_backup_local');
                 if (salvoLocal) { try { dadosApp = JSON.parse(salvoLocal); } catch(err) {} }
+                validarGarantiaAdmin(dadosApp);
                 atualizarIndicadorStatus('erro', 'Offline');
                 if (mostrarAlerta) alert("Erro ao conectar à nuvem.");
             } finally {
@@ -573,17 +589,15 @@
             const headerUsuario = document.getElementById('header-usuario-logado');
             const selectLogin = document.getElementById('login-select-usuario');
 
+            validarGarantiaAdmin(dadosApp);
+
             if (!usuarioLogado || !dadosApp.amigos.includes(usuarioLogado)) {
                 modalLogin.classList.remove('hidden');
                 if (selectLogin) {
                     selectLogin.innerHTML = '';
-                    if (dadosApp.amigos.length === 0) {
-                        selectLogin.innerHTML = `<option value="">Nenhum usuário cadastrado</option>`;
-                    } else {
-                        dadosApp.amigos.forEach(a => {
-                            selectLogin.innerHTML += `<option value="${a}">${a}</option>`;
-                        });
-                    }
+                    dadosApp.amigos.forEach(a => {
+                        selectLogin.innerHTML += `<option value="${a}">${a}</option>`;
+                    });
                 }
             } else {
                 modalLogin.classList.add('hidden');
@@ -754,7 +768,7 @@
             container.innerHTML = '';
 
             if (!amigo || dadosApp.partidas.length === 0) {
-                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">Nenhum palpite ou partida disponível.</p>`;
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">Nenhum palpite ou partida disponível.</p>";
                 if (infoHorario) infoHorario.textContent = "Nenhum envio registrado.";
                 return;
             }
@@ -789,7 +803,6 @@
             });
         }
 
-        // Função para o Administrador excluir os palpites do usuário selecionado na aba Palpites
         function adminExcluirPalpitesAmigoSelecionado() {
             const select = document.getElementById('select-ver-amigo');
             if (!select) return;
@@ -1133,6 +1146,7 @@
             inpSenha.value = '';
 
             salvarDados((estado) => {
+                validarGarantiaAdmin(estado);
                 if (!estado.amigos.includes(nome)) {
                     estado.amigos.push(nome);
                     if (!estado.senhasUsuarios) estado.senhasUsuarios = {};
@@ -1143,11 +1157,15 @@
         }
 
         function removerAmigo(nome) {
+            if (dadosApp.amigos.length <= 1) {
+                return alert("Você não pode apagar o único participante restante do sistema.");
+            }
             if (!confirm(`Deseja realmente apagar o participante ${nome}?`)) return;
             salvarDados((estado) => {
                 estado.amigos = estado.amigos.filter(a => a !== nome);
                 if (estado.senhasUsuarios) delete estado.senhasUsuarios[nome];
                 delete estado.palpites[nome];
+                validarGarantiaAdmin(estado);
             });
         }
 
@@ -1199,6 +1217,7 @@
             const dataHoraFormatada = agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
             salvarDados((estado) => {
+                validarGarantiaAdmin(estado);
                 if (!estado.amigos.includes(nome)) estado.amigos.push(nome);
                 if (!estado.palpites[nome]) estado.palpites[nome] = { jogos: {}, timestamp: dataHoraFormatada };
             });
