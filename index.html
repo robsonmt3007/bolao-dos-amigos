@@ -317,14 +317,15 @@
 
     <script>
         const SENHA_ADMIN = "1234";
+        const CACHE_LOCAL_KEY = "bolao_amigos_dados_v1";
         let adminLogado = false;
         let verPalpitesLogado = false;
         let abaAtual = 'palpites';
         let sincronizandoAgora = false;
 
-        const JSONBIN_MASTER_KEY = "$2a$10$aW.mUJ8nW0E9kjAyIY1KveHbcOXt9xBk1L5fjtTv88Dc2fCGDwH7m"; 
-        const BIN_ID_FIXO = "6afe488cffd5d16053cd3368"; 
-        let JSONBIN_BIN_ID = BIN_ID_FIXO || localStorage.getItem('bolao_bin_id') || ""; 
+        const JSONBIN_MASTER_KEY = "$2a$10$aW.mUJ8nW0E9kjAyIY1KveHbcOXt9xBk1L5fjtTv88Dc2fCGDwH7m";
+        const BIN_ID_FIXO = "6afe26f5ffd5d16053cce3f2";
+        let JSONBIN_BIN_ID = BIN_ID_FIXO || localStorage.getItem('bolao_bin_id') || "";
 
         let usuarioLogado = localStorage.getItem('bolao_usuario_logado') || "";
 
@@ -402,13 +403,125 @@
 
         let dadosApp = JSON.parse(JSON.stringify(DADOS_PADRAO));
 
+        // Garante sempre que "Admin" exista na lista de participantes e tenha senha padrão
         function validarGarantiaAdmin(dados) {
-            if (!dados.amigos || !Array.isArray(dados.amigos) || dados.amigos.length === 0) {
-                dados.amigos = ["Admin"];
-                if (!dados.senhasUsuarios) dados.senhasUsuarios = {};
-                dados.senhasUsuarios["Admin"] = "1234";
+            const base = dados && typeof dados === 'object' ? dados : {};
+            const lista = Array.isArray(base.amigos) ? base.amigos.map(n => String(n || '').trim()).filter(Boolean) : [];
+            const senhas = base.senhasUsuarios && typeof base.senhasUsuarios === 'object' ? { ...base.senhasUsuarios } : {};
+
+            const idxAdmin = lista.findIndex(nome => nome.toLowerCase() === 'admin');
+            if (idxAdmin === -1) {
+                lista.unshift("Admin");
+            } else {
+                lista[idxAdmin] = "Admin";
             }
-            return dados;
+
+            if (!senhas["Admin"]) {
+                senhas["Admin"] = SENHA_ADMIN;
+            }
+
+            return {
+                ...JSON.parse(JSON.stringify(DADOS_PADRAO)),
+                ...base,
+                amigos: lista,
+                senhasUsuarios: senhas,
+                torneios: Array.isArray(base.torneios) && base.torneios.length ? base.torneios : [...DADOS_PADRAO.torneios],
+                partidas: Array.isArray(base.partidas) ? base.partidas : [],
+                palpites: base.palpites && typeof base.palpites === 'object' ? base.palpites : {},
+                limiteJogosPorAposta: Number(base.limiteJogosPorAposta) || 0
+            };
+        }
+
+        function salvarCacheLocal() {
+            try {
+                localStorage.setItem(CACHE_LOCAL_KEY, JSON.stringify(dadosApp));
+            } catch (e) {}
+        }
+
+        function carregarCacheLocal() {
+            try {
+                const raw = localStorage.getItem(CACHE_LOCAL_KEY);
+                if (raw) {
+                    dadosApp = validarGarantiaAdmin(JSON.parse(raw));
+                } else {
+                    dadosApp = validarGarantiaAdmin(DADOS_PADRAO);
+                }
+            } catch (e) {
+                dadosApp = validarGarantiaAdmin(DADOS_PADRAO);
+            }
+        }
+
+        function popularSelectLoginUsuario() {
+            dadosApp = validarGarantiaAdmin(dadosApp);
+            const select = document.getElementById('login-select-usuario');
+            if (!select) return;
+
+            select.innerHTML = dadosApp.amigos.map(amigo => {
+                const label = amigo === "Admin" ? "Admin (Administrador)" : amigo;
+                return `<option value="${amigo}">${label}</option>`;
+            }).join('');
+
+            if (usuarioLogado && dadosApp.amigos.includes(usuarioLogado)) {
+                select.value = usuarioLogado;
+            } else {
+                select.value = "Admin";
+            }
+        }
+
+        function atualizarInterfaceLogin() {
+            popularSelectLoginUsuario();
+            const modal = document.getElementById('modal-login-usuario');
+            const headerUser = document.getElementById('header-usuario-logado');
+
+            if (usuarioLogado && dadosApp.amigos.includes(usuarioLogado)) {
+                if (modal) modal.classList.add('hidden');
+                if (headerUser) headerUser.textContent = usuarioLogado;
+            } else {
+                usuarioLogado = "";
+                localStorage.removeItem('bolao_usuario_logado');
+                if (modal) modal.classList.remove('hidden');
+                if (headerUser) headerUser.textContent = "Usuário";
+            }
+        }
+
+        function fazerLoginUsuario() {
+            const select = document.getElementById('login-select-usuario');
+            const inputSenha = document.getElementById('login-input-senha');
+            const usuario = select ? select.value : "";
+            const senhaDigitada = inputSenha ? inputSenha.value : "";
+
+            dadosApp = validarGarantiaAdmin(dadosApp);
+            const senhaEsperada = dadosApp.senhasUsuarios[usuario] ?? (usuario === "Admin" ? SENHA_ADMIN : "");
+
+            if (!usuario) {
+                alert("Selecione um participante.");
+                return;
+            }
+
+            if (senhaDigitada !== senhaEsperada) {
+                alert("Senha incorreta!");
+                return;
+            }
+
+            usuarioLogado = usuario;
+            localStorage.setItem('bolao_usuario_logado', usuarioLogado);
+            if (inputSenha) inputSenha.value = "";
+
+            if (usuarioLogado === "Admin") {
+                adminLogado = true;
+                verPalpitesLogado = true;
+            }
+
+            atualizarInterfaceLogin();
+            renderizarTudo();
+        }
+
+        function sairUsuario() {
+            usuarioLogado = "";
+            adminLogado = false;
+            verPalpitesLogado = false;
+            localStorage.removeItem('bolao_usuario_logado');
+            atualizarInterfaceLogin();
         }
 
         function atualizarIndicadorStatus(estado, texto) {
@@ -440,816 +553,572 @@
             if (!JSONBIN_BIN_ID || !JSONBIN_MASTER_KEY) return null;
             const url = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest?t=${Date.now()}`;
             const resp = await fetch(url, {
-                method: 'GET',
-                cache: 'no-store',
+                method: "GET",
                 headers: {
-                    'X-Master-Key': JSONBIN_MASTER_KEY,
-                    'Cache-Control': 'no-cache'
+                    "X-Master-Key": JSONBIN_MASTER_KEY,
+                    "X-Bin-Meta": "false",
+                    "Cache-Control": "no-cache"
                 }
             });
             if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-            const resJson = await resp.json();
-            return resJson && resJson.record ? resJson.record : null;
+            const json = await resp.json();
+            return json && json.record ? json.record : json;
         }
 
-        async function salvarDados(mutacaoCallback = null) {
-            if (sincronizandoAgora) return;
-            sincronizandoAgora = true;
-            atualizarIndicadorStatus('sync', 'Salvando...');
+        async function salvarNuvem() {
+            dadosApp = validarGarantiaAdmin(dadosApp);
+            salvarCacheLocal();
+            if (!JSONBIN_BIN_ID || !JSONBIN_MASTER_KEY) return;
 
+            atualizarIndicadorStatus('sync', 'Salvando na nuvem...');
             try {
-                if (JSONBIN_BIN_ID) {
-                    const dadosNuvem = await buscarNuvemSemCache();
-                    if (dadosNuvem) {
-                        validarGarantiaAdmin(dadosNuvem);
-                        dadosApp = {
-                            amigos: Array.isArray(dadosNuvem.amigos) ? dadosNuvem.amigos : ["Admin"],
-                            senhasUsuarios: dadosNuvem.senhasUsuarios || { "Admin": "1234" },
-                            torneios: Array.isArray(dadosNuvem.torneios) ? dadosNuvem.torneios : DADOS_PADRAO.torneios,
-                            partidas: Array.isArray(dadosNuvem.partidas) ? dadosNuvem.partidas : [],
-                            palpites: dadosNuvem.palpites || {},
-                            limiteJogosPorAposta: dadosNuvem.limiteJogosPorAposta || 0
-                        };
-                    }
-                }
-
-                if (typeof mutacaoCallback === 'function') {
-                    mutacaoCallback(dadosApp);
-                }
-
-                validarGarantiaAdmin(dadosApp);
-                localStorage.setItem('bolao_backup_local', JSON.stringify(dadosApp));
-                atualizarInterfaceCompleta();
-
-                if (!JSONBIN_BIN_ID) {
-                    const resp = await fetch('https://api.jsonbin.io/v3/b', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Master-Key': JSONBIN_MASTER_KEY,
-                            'X-Bin-Name': 'BolaoDosAmigos'
-                        },
-                        body: JSON.stringify(dadosApp)
-                    });
-                    if (!resp.ok) throw new Error(`Erro ao criar Bin`);
-                    const resJson = await resp.json();
-                    if (resJson && resJson.metadata && resJson.metadata.id) {
-                        JSONBIN_BIN_ID = resJson.metadata.id;
-                        localStorage.setItem('bolao_bin_id', JSONBIN_BIN_ID);
-                    }
-                } else {
-                    await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Master-Key': JSONBIN_MASTER_KEY
-                        },
-                        body: JSON.stringify(dadosApp)
-                    });
-                }
-
-                const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                atualizarIndicadorStatus('online', `Salvo às ${hora}`);
+                const resp = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Master-Key": JSONBIN_MASTER_KEY
+                    },
+                    body: JSON.stringify(dadosApp)
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                atualizarIndicadorStatus('online', 'Sincronizado na nuvem');
             } catch (err) {
-                console.error("Erro na nuvem:", err);
-                atualizarIndicadorStatus('erro', 'Falha ao salvar');
-                localStorage.setItem('bolao_backup_local', JSON.stringify(dadosApp));
-                atualizarInterfaceCompleta();
-            } finally {
-                sincronizandoAgora = false;
+                atualizarIndicadorStatus('offline', 'Salvo localmente (sem rede)');
             }
         }
 
-        async function carregarDadosNuvem(mostrarAlerta = false) {
+        async function forcarSincronizacaoNuvem(mostrarAlerta = false) {
             if (sincronizandoAgora) return;
             sincronizandoAgora = true;
-            atualizarIndicadorStatus('sync', 'Buscando...');
-
+            atualizarIndicadorStatus('sync', 'Sincronizando...');
             try {
-                if (!JSONBIN_BIN_ID) {
-                    const salvoLocal = localStorage.getItem('bolao_backup_local');
-                    if (salvoLocal) {
-                        try { dadosApp = JSON.parse(salvoLocal); } catch(e){}
-                    }
-                    validarGarantiaAdmin(dadosApp);
-                    atualizarIndicadorStatus('online', 'Pronto');
+                const remoto = await buscarNuvemSemCache();
+                if (remoto && typeof remoto === 'object') {
+                    dadosApp = validarGarantiaAdmin(remoto);
+                    salvarCacheLocal();
+                    atualizarIndicadorStatus('online', 'Sincronizado na nuvem');
+                    renderizarTudo();
+                    if (mostrarAlerta) alert("Dados sincronizados com a nuvem!");
                 } else {
-                    const dadosNuvem = await buscarNuvemSemCache();
-                    if (dadosNuvem) {
-                        validarGarantiaAdmin(dadosNuvem);
-                        dadosApp = {
-                            amigos: Array.isArray(dadosNuvem.amigos) ? dadosNuvem.amigos : ["Admin"],
-                            senhasUsuarios: dadosNuvem.senhasUsuarios || { "Admin": "1234" },
-                            torneios: Array.isArray(dadosNuvem.torneios) ? dadosNuvem.torneios : DADOS_PADRAO.torneios,
-                            partidas: Array.isArray(dadosNuvem.partidas) ? dadosNuvem.partidas : [],
-                            palpites: dadosNuvem.palpites || {},
-                            limiteJogosPorAposta: dadosNuvem.limiteJogosPorAposta || 0
-                        };
-                        localStorage.setItem('bolao_backup_local', JSON.stringify(dadosApp));
-                        const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                        atualizarIndicadorStatus('online', `Atualizado às ${hora}`);
-                        if (mostrarAlerta) alert("Dados atualizados com sucesso!");
-                    }
+                    atualizarIndicadorStatus('offline', 'Modo Local');
                 }
-            } catch (e) {
-                const salvoLocal = localStorage.getItem('bolao_backup_local');
-                if (salvoLocal) { try { dadosApp = JSON.parse(salvoLocal); } catch(err) {} }
-                validarGarantiaAdmin(dadosApp);
-                atualizarIndicadorStatus('erro', 'Offline');
-                if (mostrarAlerta) alert("Erro ao conectar à nuvem.");
+            } catch (err) {
+                atualizarIndicadorStatus('offline', 'Modo Local');
+                if (mostrarAlerta) alert("Não foi possível conectar à nuvem. Usando dados locais.");
             } finally {
                 sincronizandoAgora = false;
-                atualizarInterfaceCompleta();
             }
-        }
-
-        function forcarSincronizacaoNuvem(comAlerta = false) {
-            carregarDadosNuvem(comAlerta);
-        }
-
-        function atualizarInterfaceCompleta() {
-            checarEstadoLogin();
-            atualizarPote();
-
-            if (abaAtual === 'palpites') renderizarPalpites();
-            if (abaAtual === 'ver-palpites' && verPalpitesLogado) { popularSelectVerAmigos(); renderizarVerPalpitesAmigo(); }
-            if (abaAtual === 'ranking') { atualizarSelectRankingComp(); atualizarRanking(); }
-            if (abaAtual === 'admin' && adminLogado) {
-                renderizarAdminPartidas();
-                renderizarAdminAmigos();
-                renderizarAdminTorneios();
-                atualizarSelectNovoJogoCampeonato();
-                const limInput = document.getElementById('input-limite-jogos');
-                if (limInput) limInput.value = dadosApp.limiteJogosPorAposta || 0;
-            }
-        }
-
-        function checarEstadoLogin() {
-            const modalLogin = document.getElementById('modal-login-usuario');
-            const headerUsuario = document.getElementById('header-usuario-logado');
-            const selectLogin = document.getElementById('login-select-usuario');
-
-            validarGarantiaAdmin(dadosApp);
-
-            if (!usuarioLogado || !dadosApp.amigos.includes(usuarioLogado)) {
-                modalLogin.classList.remove('hidden');
-                if (selectLogin) {
-                    selectLogin.innerHTML = '';
-                    dadosApp.amigos.forEach(a => {
-                        selectLogin.innerHTML += `<option value="${a}">${a}</option>`;
-                    });
-                }
-            } else {
-                modalLogin.classList.add('hidden');
-                if (headerUsuario) headerUsuario.textContent = usuarioLogado;
-            }
-        }
-
-        function fazerLoginUsuario() {
-            const select = document.getElementById('login-select-usuario');
-            const senhaInput = document.getElementById('login-input-senha');
-            const amigo = select.value;
-            const senha = senhaInput.value;
-
-            if (!amigo) return alert("Selecione um participante.");
-            
-            const senhaCadastrada = dadosApp.senhasUsuarios ? dadosApp.senhasUsuarios[amigo] : "";
-            if (senhaCadastrada && senhaCadastrada !== senha) {
-                return alert("Senha incorreta!");
-            }
-
-            usuarioLogado = amigo;
-            localStorage.setItem('bolao_usuario_logado', amigo);
-            senhaInput.value = '';
-            atualizarInterfaceCompleta();
-        }
-
-        function sairUsuario() {
-            if (!confirm("Deseja sair da sua conta?")) return;
-            usuarioLogado = "";
-            localStorage.removeItem('bolao_usuario_logado');
-            atualizarInterfaceCompleta();
         }
 
         function mudarAba(aba) {
             abaAtual = aba;
-            ['palpites', 'ver-palpites', 'ranking', 'regras', 'admin'].forEach(a => {
-                const painel = document.getElementById('tab-' + a);
-                const botao = document.getElementById('tab-btn-' + a);
-                if (painel) painel.classList.add('hidden');
-                if (botao) botao.className = "py-2.5 rounded-lg transition flex flex-col items-center gap-1 text-slate-400 hover:text-white";
+            const abas = ['palpites', 'ver-palpites', 'ranking', 'regras', 'admin'];
+            abas.forEach(nome => {
+                const painel = document.getElementById(`tab-${nome}`);
+                const btn = document.getElementById(`tab-btn-${nome}`);
+                if (painel) painel.classList.toggle('hidden', nome !== aba);
+                if (btn) {
+                    if (nome === aba) {
+                        btn.className = "py-2.5 rounded-lg transition flex flex-col items-center gap-1 bg-emerald-600 text-white shadow";
+                    } else {
+                        btn.className = "py-2.5 rounded-lg transition flex flex-col items-center gap-1 text-slate-400 hover:text-white";
+                    }
+                }
             });
-            const painelAtivo = document.getElementById('tab-' + aba);
-            const botaoAtivo = document.getElementById('tab-btn-' + aba);
-            if (painelAtivo) painelAtivo.classList.remove('hidden');
-            if (botaoAtivo) botaoAtivo.className = "py-2.5 rounded-lg transition flex flex-col items-center gap-1 bg-emerald-600 text-white shadow";
+            renderizarTudo();
+        }
 
-            if (aba === 'admin') checarAdminEstado();
-            if (aba === 'ver-palpites') checarVerPalpitesEstado();
-            atualizarInterfaceCompleta();
-            carregarDadosNuvem(false);
+        function atualizarPote() {
+            const infoQtd = document.getElementById('info-qtd-amigos');
+            const infoPote = document.getElementById('info-pote');
+            const participantesComPalpite = Object.keys(dadosApp.palpites || {}).filter(nome => {
+                const p = dadosApp.palpites[nome];
+                return p && p.escolhas && Object.keys(p.escolhas).length > 0;
+            });
+            if (infoQtd) infoQtd.textContent = `${participantesComPalpite.length} participantes com palpites ativos`;
+            if (infoPote) infoPote.textContent = `R$ ${(participantesComPalpite.length * 10).toFixed(2).replace('.', ',')}`;
+        }
+
+        function renderizarPartidasPalpites() {
+            const container = document.getElementById('lista-partidas-palpites');
+            if (!container) return;
+
+            if (!dadosApp.partidas.length) {
+                container.innerHTML = `<div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center text-xs text-slate-400">Nenhuma partida cadastrada no momento.</div>`;
+                return;
+            }
+
+            const palpiteUsuario = (usuarioLogado && dadosApp.palpites[usuarioLogado]?.escolhas) || {};
+
+            container.innerHTML = dadosApp.partidas.map(partida => {
+                const escolhaAtual = palpiteUsuario[partida.id] || "";
+                const btnClass = (op) => escolhaAtual === op
+                    ? "bg-emerald-600 text-white border-emerald-500 font-bold"
+                    : "bg-slate-800/70 text-slate-300 border-slate-700 hover:bg-slate-800";
+
+                return `
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+                        <div class="flex justify-between items-center text-[10px] text-slate-400">
+                            <span class="font-bold text-emerald-400 uppercase">${partida.campeonato || 'Campeonato'}</span>
+                            <span>${partida.data || ''}</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-xs">
+                            <button type="button" onclick="registrarPalpite('${partida.id}', 'casa')" class="p-2.5 rounded-xl border transition flex flex-col items-center gap-1 ${btnClass('casa')}">
+                                <img src="${obterEscudo(partida.casa)}" alt="${partida.casa}" class="w-6 h-6 object-contain">
+                                <span class="truncate max-w-full">${partida.casa}</span>
+                            </button>
+                            <button type="button" onclick="registrarPalpite('${partida.id}', 'empate')" class="p-2.5 rounded-xl border transition flex flex-col items-center justify-center ${btnClass('empate')}">
+                                <span>Empate</span>
+                            </button>
+                            <button type="button" onclick="registrarPalpite('${partida.id}', 'visitante')" class="p-2.5 rounded-xl border transition flex flex-col items-center gap-1 ${btnClass('visitante')}">
+                                <img src="${obterEscudo(partida.visitante)}" alt="${partida.visitante}" class="w-6 h-6 object-contain">
+                                <span class="truncate max-w-full">${partida.visitante}</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function registrarPalpite(partidaId, escolha) {
+            if (!usuarioLogado) {
+                atualizarInterfaceLogin();
+                return;
+            }
+            if (!dadosApp.palpites[usuarioLogado]) {
+                dadosApp.palpites[usuarioLogado] = { escolhas: {}, atualizadoEm: new Date().toISOString() };
+            }
+            const escolhas = dadosApp.palpites[usuarioLogado].escolhas;
+            const limite = Number(dadosApp.limiteJogosPorAposta) || 0;
+
+            if (escolhas[partidaId] === escolha) {
+                delete escolhas[partidaId];
+            } else {
+                if (!escolhas[partidaId] && limite > 0 && Object.keys(escolhas).length >= limite) {
+                    alert(`Limite de ${limite} palpites por aposta atingido.`);
+                    return;
+                }
+                escolhas[partidaId] = escolha;
+            }
+            dadosApp.palpites[usuarioLogado].atualizadoEm = new Date().toISOString();
+            renderizarPartidasPalpites();
+            atualizarPote();
+            await salvarNuvem();
+        }
+
+        function validarSenhaVerPalpites() {
+            const input = document.getElementById('ver-palpites-senha-input');
+            if (input && input.value === SENHA_ADMIN) {
+                verPalpitesLogado = true;
+                input.value = "";
+                renderizarVerPalpites();
+            } else {
+                alert("Senha de administrador incorreta!");
+            }
+        }
+
+        function renderizarVerPalpites() {
+            const boxLogin = document.getElementById('ver-palpites-login-box');
+            const painel = document.getElementById('ver-palpites-painel-conteudo');
+            if (!boxLogin || !painel) return;
+
+            if (!verPalpitesLogado && usuarioLogado !== "Admin") {
+                boxLogin.classList.remove('hidden');
+                painel.classList.add('hidden');
+                return;
+            }
+
+            boxLogin.classList.add('hidden');
+            painel.classList.remove('hidden');
+
+            const select = document.getElementById('select-ver-amigo');
+            if (select) {
+                const anterior = select.value;
+                select.innerHTML = dadosApp.amigos.map(a => `<option value="${a}">${a}</option>`).join('');
+                if (anterior && dadosApp.amigos.includes(anterior)) {
+                    select.value = anterior;
+                }
+            }
+            renderizarVerPalpitesAmigo();
+        }
+
+        function renderizarVerPalpitesAmigo() {
+            const select = document.getElementById('select-ver-amigo');
+            const infoHora = document.getElementById('info-horario-envio');
+            const lista = document.getElementById('lista-ver-palpites-amigo');
+            if (!select || !lista) return;
+
+            const amigo = select.value;
+            const registro = dadosApp.palpites[amigo];
+            if (!registro || !registro.escolhas || !Object.keys(registro.escolhas).length) {
+                if (infoHora) infoHora.textContent = `Nenhum palpite registrado para ${amigo}.`;
+                lista.innerHTML = `<p class="text-xs text-slate-400">Sem palpites.</p>`;
+                return;
+            }
+
+            if (infoHora) {
+                const dataFmt = registro.atualizadoEm ? new Date(registro.atualizadoEm).toLocaleString('pt-BR') : 'Não informado';
+                infoHora.textContent = `Última atualização de ${amigo}: ${dataFmt}`;
+            }
+
+            lista.innerHTML = dadosApp.partidas.map(p => {
+                const esc = registro.escolhas[p.id];
+                if (!esc) return '';
+                const textoEsc = esc === 'casa' ? p.casa : esc === 'visitante' ? p.visitante : 'Empate';
+                return `<div class="flex justify-between items-center text-xs bg-slate-800/60 px-3 py-2 rounded-xl">
+                    <span>${p.casa} x ${p.visitante}</span>
+                    <strong class="text-emerald-400">${textoEsc}</strong>
+                </div>`;
+            }).join('') || `<p class="text-xs text-slate-400">Sem palpites nas partidas atuais.</p>`;
+        }
+
+        async function adminExcluirPalpitesAmigoSelecionado() {
+            const select = document.getElementById('select-ver-amigo');
+            if (!select || !select.value) return;
+            const amigo = select.value;
+            if (!confirm(`Excluir todos os palpites de ${amigo}?`)) return;
+            delete dadosApp.palpites[amigo];
+            renderizarVerPalpitesAmigo();
+            atualizarPote();
+            await salvarNuvem();
+        }
+
+        function atualizarRanking() {
+            const filtroSelect = document.getElementById('filtro-ranking-comp');
+            const corpo = document.getElementById('tabela-ranking-corpo');
+            if (!corpo) return;
+
+            const compFiltro = filtroSelect ? filtroSelect.value : 'todos';
+            if (filtroSelect) {
+                const atual = filtroSelect.value;
+                filtroSelect.innerHTML = `<option value="todos">Geral (Todos)</option>` +
+                    dadosApp.torneios.map(t => `<option value="${t}">${t}</option>`).join('');
+                if ([...filtroSelect.options].some(o => o.value === atual)) filtroSelect.value = atual;
+            }
+
+            const partidasConsideradas = dadosApp.partidas.filter(p => compFiltro === 'todos' || p.campeonato === compFiltro);
+            const linhas = dadosApp.amigos.map(nome => {
+                const escolhas = dadosApp.palpites[nome]?.escolhas || {};
+                let jogos = 0;
+                let acertos = 0;
+                partidasConsideradas.forEach(p => {
+                    const esc = escolhas[p.id];
+                    if (esc) {
+                        jogos++;
+                        if (p.resultado && p.resultado === esc) acertos++;
+                    }
+                });
+                return { nome, jogos, acertos, pts: acertos };
+            }).sort((a, b) => b.pts - a.pts || b.acertos - a.acertos || a.nome.localeCompare(b.nome));
+
+            corpo.innerHTML = linhas.map((r, idx) => `
+                <tr>
+                    <td class="py-2.5 px-2 text-center font-bold text-slate-400">${idx + 1}</td>
+                    <td class="py-2.5 px-2 font-semibold text-white">${r.nome}</td>
+                    <td class="py-2.5 px-2 text-center text-slate-300">${r.jogos}</td>
+                    <td class="py-2.5 px-2 text-center text-emerald-400 font-bold">${r.acertos}</td>
+                    <td class="py-2.5 px-2 text-right font-black text-white">${r.pts}</td>
+                </tr>
+            `).join('');
         }
 
         function validarSenhaAdmin() {
-            const senha = document.getElementById('admin-senha-input').value;
-            if (senha === SENHA_ADMIN) {
+            const input = document.getElementById('admin-senha-input');
+            if (input && input.value === SENHA_ADMIN) {
                 adminLogado = true;
-                document.getElementById('admin-senha-input').value = '';
-                checarAdminEstado();
+                input.value = "";
+                renderizarAdmin();
             } else {
-                alert("Senha incorreta!");
+                alert("Senha de administrador incorreta!");
             }
         }
 
         function sairAdmin() {
             adminLogado = false;
-            checarAdminEstado();
+            renderizarAdmin();
         }
 
-        function checarAdminEstado() {
+        function renderizarAdmin() {
             const loginBox = document.getElementById('admin-login-box');
-            const painelConteudo = document.getElementById('admin-painel-conteudo');
-            if (adminLogado) {
-                loginBox.classList.add('hidden');
-                painelConteudo.classList.remove('hidden');
-                renderizarAdminPartidas();
-                renderizarAdminAmigos();
-                renderizarAdminTorneios();
-                atualizarSelectNovoJogoCampeonato();
-                const limInput = document.getElementById('input-limite-jogos');
-                if (limInput) limInput.value = dadosApp.limiteJogosPorAposta || 0;
-            } else {
+            const painel = document.getElementById('admin-painel-conteudo');
+            if (!loginBox || !painel) return;
+
+            if (!adminLogado && usuarioLogado !== "Admin") {
                 loginBox.classList.remove('hidden');
-                painelConteudo.classList.add('hidden');
-            }
-        }
-
-        function validarSenhaVerPalpites() {
-            const senha = document.getElementById('ver-palpites-senha-input').value;
-            if (senha === SENHA_ADMIN) {
-                verPalpitesLogado = true;
-                document.getElementById('ver-palpites-senha-input').value = '';
-                checarVerPalpitesEstado();
-            } else {
-                alert("Senha incorreta!");
-            }
-        }
-
-        function checarVerPalpitesEstado() {
-            const loginBox = document.getElementById('ver-palpites-login-box');
-            const painelConteudo = document.getElementById('ver-palpites-painel-conteudo');
-            if (verPalpitesLogado) {
-                loginBox.classList.add('hidden');
-                painelConteudo.classList.remove('hidden');
-                popularSelectVerAmigos();
-                renderizarVerPalpitesAmigo();
-            } else {
-                loginBox.classList.remove('hidden');
-                painelConteudo.classList.add('hidden');
-            }
-        }
-
-        function atualizarPote() {
-            let qtdValidos = 0;
-            dadosApp.amigos.forEach(amigo => {
-                const pals = dadosApp.palpites[amigo] || {};
-                const temPalpite = Object.values(pals.jogos || {}).some(val => val !== "" && val !== null && val !== undefined);
-                if (temPalpite) qtdValidos++;
-            });
-            document.getElementById('info-pote').textContent = 'R$ ' + (qtdValidos * 10).toFixed(2).replace('.', ',');
-            document.getElementById('info-qtd-amigos').textContent = qtdValidos + ' participantes com palpites ativos';
-        }
-
-        function atualizarSelectRankingComp() {
-            const select = document.getElementById('filtro-ranking-comp');
-            if (!select) return;
-            const valAtual = select.value;
-            select.innerHTML = `<option value="todos">Geral (Todos)</option>`;
-            dadosApp.torneios.forEach(t => {
-                select.innerHTML += `<option value="${t}" ${t === valAtual ? 'selected' : ''}>${t}</option>`;
-            });
-        }
-
-        function atualizarSelectNovoJogoCampeonato() {
-            const select = document.getElementById('novo-campeonato');
-            if (!select) return;
-            const valAtual = select.value;
-            select.innerHTML = '';
-            dadosApp.torneios.forEach(t => {
-                select.innerHTML += `<option value="${t}" ${t === valAtual ? 'selected' : ''}>${t}</option>`;
-            });
-        }
-
-        function popularSelectVerAmigos() {
-            const select = document.getElementById('select-ver-amigo');
-            if (!select) return;
-            const selecionadoAntes = select.value;
-            select.innerHTML = '';
-            if (dadosApp.amigos.length === 0) {
-                select.innerHTML = `<option value="">Nenhum participante</option>`;
-                return;
-            }
-            const alvo = dadosApp.amigos.includes(selecionadoAntes) ? selecionadoAntes : dadosApp.amigos[0];
-            dadosApp.amigos.forEach(amigo => {
-                const opt = document.createElement('option');
-                opt.value = amigo;
-                opt.textContent = amigo;
-                if (amigo === alvo) opt.selected = true;
-                select.appendChild(opt);
-            });
-        }
-
-        function renderizarVerPalpitesAmigo() {
-            const select = document.getElementById('select-ver-amigo');
-            const container = document.getElementById('lista-ver-palpites-amigo');
-            const infoHorario = document.getElementById('info-horario-envio');
-            if (!select || !container) return;
-            const amigo = select.value;
-            container.innerHTML = '';
-
-            if (!amigo || dadosApp.partidas.length === 0) {
-                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">Nenhum palpite ou partida disponível.</p>";
-                if (infoHorario) infoHorario.textContent = "Nenhum envio registrado.";
+                painel.classList.add('hidden');
                 return;
             }
 
-            const registroUser = dadosApp.palpites[amigo] || { jogos: {}, timestamp: null };
-            const pals = registroUser.jogos || {};
+            loginBox.classList.add('hidden');
+            painel.classList.remove('hidden');
 
-            if (registroUser.timestamp) {
-                infoHorario.innerHTML = `<i class="fa-solid fa-clock text-emerald-400 mr-1"></i> Último envio / atualização: <strong class="text-white">${registroUser.timestamp}</strong>`;
-            } else {
-                infoHorario.innerHTML = `<i class="fa-solid fa-clock text-slate-500 mr-1"></i> Este participante ainda não salvou palpites.`;
+            const inputLimite = document.getElementById('input-limite-jogos');
+            if (inputLimite) inputLimite.value = dadosApp.limiteJogosPorAposta || 0;
+
+            const selectComp = document.getElementById('novo-campeonato');
+            if (selectComp) {
+                selectComp.innerHTML = dadosApp.torneios.map(t => `<option value="${t}">${t}</option>`).join('');
             }
 
-            dadosApp.partidas.forEach(p => {
-                const pal = pals[p.id];
-                let desc = "Não palpitou";
-                let badgeColor = "bg-slate-800 text-slate-400";
-                if (pal === 'C') { desc = `Vitória do ${p.casa}`; badgeColor = "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30"; }
-                else if (pal === 'E') { desc = "Empate"; badgeColor = "bg-amber-600/20 text-amber-400 border border-amber-500/30"; }
-                else if (pal === 'V') { desc = `Vitória do ${p.visitante}`; badgeColor = "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30"; }
-
-                const div = document.createElement('div');
-                div.className = "bg-slate-800/60 p-3 rounded-xl border border-slate-700/50 flex justify-between items-center text-xs";
-                div.innerHTML = `
-                    <div class="truncate pr-2">
-                        <span class="text-[10px] text-slate-400 block">${p.campeonato}</span>
-                        <span class="font-bold text-white">${p.casa} x ${p.visitante}</span>
+            const listaTorneios = document.getElementById('lista-admin-torneios');
+            if (listaTorneios) {
+                listaTorneios.innerHTML = dadosApp.torneios.map((t, i) => `
+                    <div class="flex justify-between items-center text-xs bg-slate-800/60 px-3 py-1.5 rounded-lg">
+                        <span>${t}</span>
+                        <button type="button" onclick="removerTorneio(${i})" class="text-red-400 hover:underline text-[11px]">Remover</button>
                     </div>
-                    <span class="px-2.5 py-1 rounded-lg font-bold ${badgeColor} whitespace-nowrap">${desc}</span>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        function adminExcluirPalpitesAmigoSelecionado() {
-            const select = document.getElementById('select-ver-amigo');
-            if (!select) return;
-            const amigo = select.value;
-            if (!amigo) return alert("Selecione um participante.");
-
-            if (!confirm(`Deseja realmente apagar e resetar todos os palpites do participante "${amigo}"?`)) return;
-
-            const agora = new Date();
-            const dataHoraFormatada = agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-            if (!dadosApp.palpites[amigo]) dadosApp.palpites[amigo] = {};
-            dadosApp.palpites[amigo] = { jogos: {}, timestamp: dataHoraFormatada };
-
-            renderizarVerPalpitesAmigo();
-
-            salvarDados((estadoAtualNuvem) => {
-                if (!estadoAtualNuvem.palpites[amigo]) estadoAtualNuvem.palpites[amigo] = {};
-                estadoAtualNuvem.palpites[amigo] = { jogos: {}, timestamp: dataHoraFormatada };
-            });
-
-            alert(`Palpites do participante "${amigo}" foram excluídos com sucesso!`);
-        }
-
-        function renderizarPalpites() {
-            const container = document.getElementById('lista-partidas-palpites');
-            if (!container) return;
-            container.innerHTML = '';
-            const user = usuarioLogado;
-
-            if (!user) return;
-
-            if (dadosApp.partidas.length === 0) {
-                container.innerHTML = `<div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center text-xs text-slate-400">Nenhuma partida cadastrada na rodada.</div>`;
-                return;
+                `).join('');
             }
 
-            const registroUser = dadosApp.palpites[user] || { jogos: {} };
-            const palsUsuario = registroUser.jogos || {};
-            const limite = dadosApp.limiteJogosPorAposta || 0;
-
-            let qtdPalpitados = Object.values(palsUsuario).filter(val => val !== "" && val !== null && val !== undefined).length;
-
-            if (limite > 0) {
-                const avisoLimite = document.createElement('div');
-                avisoLimite.className = "bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl text-xs text-emerald-300 flex justify-between items-center";
-                avisoLimite.innerHTML = `<span><i class="fa-solid fa-circle-info mr-1"></i> Limite da rodada:</span><strong class="text-white">${qtdPalpitados} / ${limite} jogos preenchidos</strong>`;
-                container.appendChild(avisoLimite);
-            }
-
-            dadosApp.partidas.forEach(p => {
-                const palpiteAtual = palsUsuario[p.id] || "";
-                const enc = p.resultadoOficial !== null;
-
-                const btnCasaClass = palpiteAtual === 'C' ? 'bg-emerald-600 text-white font-bold shadow ring-2 ring-emerald-400' : 'bg-slate-800 text-slate-300 hover:bg-slate-700';
-                const btnEmpateClass = palpiteAtual === 'E' ? 'bg-amber-600 text-white font-bold shadow ring-2 ring-amber-400' : 'bg-slate-800 text-slate-300 hover:bg-slate-700';
-                const btnVisClass = palpiteAtual === 'V' ? 'bg-emerald-600 text-white font-bold shadow ring-2 ring-emerald-400' : 'bg-slate-800 text-slate-300 hover:bg-slate-700';
-
-                let statusFinalHtml = `<span class="text-slate-400">${p.data}</span>`;
-                if (enc) {
-                    const textoRes = p.resultadoOficial === 'C' ? 'Vitória do ' + p.casa : (p.resultadoOficial === 'V' ? 'Vitória do ' + p.visitante : 'Empate');
-                    statusFinalHtml = `<span class="text-amber-400 font-bold">Oficial: ${textoRes}</span>`;
-                }
-
-                const card = document.createElement('div');
-                card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3";
-                card.innerHTML = `
-                    <div class="flex justify-between items-center text-[11px]">
-                        <span class="bg-emerald-500/10 text-emerald-400 font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/20"><i class="fa-solid fa-trophy mr-1"></i>${p.campeonato}</span>
-                        ${statusFinalHtml}
-                    </div>
-                    <div class="flex items-center justify-between gap-2">
-                        <div class="flex items-center gap-2 w-2/5 justify-end text-right">
-                            <span class="text-xs font-bold text-white leading-tight">${p.casa}</span>
-                            <img src="${obterEscudo(p.casa)}" onerror="this.onerror=null;this.src='${gerarEscudoVetorial(p.casa)}'" class="w-8 h-8 object-contain flex-shrink-0">
+            const listaPartidas = document.getElementById('lista-admin-partidas');
+            if (listaPartidas) {
+                listaPartidas.innerHTML = dadosApp.partidas.map(p => `
+                    <div class="bg-slate-800/60 p-3 rounded-xl space-y-2 text-xs">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-white">${p.casa} x ${p.visitante}</span>
+                            <button type="button" onclick="removerPartida('${p.id}')" class="text-red-400 text-[11px]">Excluir</button>
                         </div>
-                        <div class="text-center font-bold text-slate-500 text-xs w-1/5">VS</div>
-                        <div class="flex items-center gap-2 w-2/5 justify-start text-left">
-                            <img src="${obterEscudo(p.visitante)}" onerror="this.onerror=null;this.src='${gerarEscudoVetorial(p.visitante)}'" class="w-8 h-8 object-contain flex-shrink-0">
-                            <span class="text-xs font-bold text-white leading-tight">${p.visitante}</span>
+                        <div class="flex gap-1.5">
+                            ${['casa', 'empate', 'visitante'].map(op => {
+                                const rotulo = op === 'casa' ? p.casa : op === 'visitante' ? p.visitante : 'Empate';
+                                const ativo = p.resultado === op ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-slate-300';
+                                return `<button type="button" onclick="definirResultado('${p.id}', '${op}')" class="flex-1 py-1.5 rounded-lg font-bold text-[11px] ${ativo}">${rotulo}</button>`;
+                            }).join('')}
                         </div>
                     </div>
-                    <div class="grid grid-cols-3 gap-1.5 pt-1">
-                        <button type="button" onclick="salvarPalpite(${p.id}, 'C')" class="py-2 text-[11px] rounded-xl transition ${btnCasaClass}">${p.casa}</button>
-                        <button type="button" onclick="salvarPalpite(${p.id}, 'E')" class="py-2 text-[11px] rounded-xl transition ${btnEmpateClass}">Empate</button>
-                        <button type="button" onclick="salvarPalpite(${p.id}, 'V')" class="py-2 text-[11px] rounded-xl transition ${btnVisClass}">${p.visitante}</button>
+                `).join('') || `<p class="text-xs text-slate-400">Nenhuma partida cadastrada.</p>`;
+            }
+
+            const listaAmigos = document.getElementById('lista-admin-amigos');
+            if (listaAmigos) {
+                listaAmigos.innerHTML = dadosApp.amigos.map(nome => `
+                    <div class="flex justify-between items-center text-xs bg-slate-800/60 px-3 py-1.5 rounded-lg">
+                        <span><strong>${nome}</strong> <span class="text-slate-400 text-[10px]">(Senha: ${dadosApp.senhasUsuarios[nome] || '1234'})</span></span>
+                        ${nome !== "Admin" ? `<button type="button" onclick="removerAmigo('${nome}')" class="text-red-400 hover:underline text-[11px]">Remover</button>` : `<span class="text-[10px] text-emerald-400">Principal</span>`}
                     </div>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        function salvarPalpite(idPartida, escolha) {
-            const user = usuarioLogado;
-            if (!user) return;
-
-            if (!dadosApp.palpites[user]) dadosApp.palpites[user] = { jogos: {}, timestamp: null };
-            if (!dadosApp.palpites[user].jogos) dadosApp.palpites[user].jogos = {};
-
-            let palsUser = dadosApp.palpites[user].jogos;
-            let palpiteAtual = palsUser[idPartida] || "";
-
-            if (palpiteAtual === escolha) {
-                palsUser[idPartida] = "";
-            } else {
-                const limite = dadosApp.limiteJogosPorAposta || 0;
-                let qtdAtuais = Object.values(palsUser).filter(val => val !== "" && val !== null && val !== undefined).length;
-                if (limite > 0 && palpiteAtual === "" && qtdAtuais >= limite) {
-                    return alert(`Limite atingido! Você só pode palpitar em até ${limite} jogos nesta rodada.`);
-                }
-                palsUser[idPartida] = escolha;
+                `).join('');
             }
-
-            const agora = new Date();
-            const dataHoraFormatada = agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            dadosApp.palpites[user].timestamp = dataHoraFormatada;
-
-            renderizarPalpites();
-
-            salvarDados((estadoAtualNuvem) => {
-                if (!estadoAtualNuvem.palpites[user]) estadoAtualNuvem.palpites[user] = { jogos: {}, timestamp: null };
-                estadoAtualNuvem.palpites[user].jogos = { ...palsUser };
-                estadoAtualNuvem.palpites[user].timestamp = dataHoraFormatada;
-            });
         }
 
-        function gerarComprovanteWhatsApp() {
-            const user = usuarioLogado;
-            if (!user) return;
-            
-            if (!confirm(`Deseja encerrar e confirmar os seus palpites para enviar no WhatsApp, ${user}?`)) return;
-
-            const registro = dadosApp.palpites[user] || { jogos: {} };
-            const pals = registro.jogos || {};
-            let txt = `🏆 *BOLÃO DOS AMIGOS* 🏆\n👤 Participante: *${user}*\n`;
-            if (registro.timestamp) txt += `📅 Registrado em: *${registro.timestamp}*\n`;
-            txt += `\n⚽ *Meus Palpites:*\n`;
-
-            dadosApp.partidas.forEach(p => {
-                const pal = pals[p.id];
-                let desc = "Não palpitou";
-                if (pal === 'C') desc = `Vitória do ${p.casa}`;
-                else if (pal === 'E') desc = "Empate";
-                else if (pal === 'V') desc = `Vitória do ${p.visitante}`;
-                txt += `• ${p.casa} x ${p.visitante} ➔ *${desc}* (${p.campeonato})\n`;
-            });
-            txt += `\n🎯 *Regra:* 1 Pt por acerto!`;
-            window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(txt), '_blank');
+        async function salvarLimiteJogos() {
+            const val = parseInt(document.getElementById('input-limite-jogos')?.value || "0", 10);
+            dadosApp.limiteJogosPorAposta = isNaN(val) || val < 0 ? 0 : val;
+            await salvarNuvem();
+            alert("Limite salvo!");
         }
 
-        function calcularPontosUsuario(amigo, filtro = 'todos') {
-            let pts = 0, acertos = 0, jogos = 0;
-            const registro = dadosApp.palpites[amigo] || { jogos: {} };
-            const pals = registro.jogos || {};
-            dadosApp.partidas.forEach(p => {
-                if (filtro !== 'todos' && p.campeonato !== filtro) return;
-                if (p.resultadoOficial !== null) {
-                    jogos++;
-                    const pal = pals[p.id];
-                    if (pal && pal === p.resultadoOficial) {
-                        pts++;
-                        acertos++;
-                    }
-                }
-            });
-            return { pontos: pts, acertos: acertos, jogos: jogos };
+        async function definirResultado(partidaId, resultado) {
+            const p = dadosApp.partidas.find(item => item.id === partidaId);
+            if (!p) return;
+            p.resultado = p.resultado === resultado ? "" : resultado;
+            renderizarAdmin();
+            atualizarRanking();
+            await salvarNuvem();
         }
 
-        function atualizarRanking() {
-            const tbody = document.getElementById('tabela-ranking-corpo');
-            if (!tbody) return;
-            tbody.innerHTML = '';
-            const filtro = document.getElementById('filtro-ranking-comp').value;
-            const lista = dadosApp.amigos.map(a => ({ nome: a, ...calcularPontosUsuario(a, filtro) }));
-            lista.sort((a, b) => b.pontos - a.pontos || b.acertos - a.acertos);
-
-            if (lista.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-slate-500">Nenhum participante no ranking.</td></tr>`;
-                return;
-            }
-
-            lista.forEach((item, idx) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="py-3 px-2 text-center font-bold text-slate-400">${idx + 1}º</td>
-                    <td class="py-3 px-2 font-semibold text-white">${item.nome}</td>
-                    <td class="py-3 px-2 text-center text-slate-400">${item.jogos}</td>
-                    <td class="py-3 px-2 text-center text-emerald-400 font-bold">${item.acertos}</td>
-                    <td class="py-3 px-2 text-right font-black text-emerald-400 text-sm">${item.pontos}</td>
-                `;
-                tbody.appendChild(tr);
-            });
+        async function removerPartida(partidaId) {
+            dadosApp.partidas = dadosApp.partidas.filter(item => item.id !== partidaId);
+            renderizarTudo();
+            await salvarNuvem();
         }
 
-        function salvarLimiteJogos() {
-            const input = document.getElementById('input-limite-jogos');
-            const valor = parseInt(input.value) || 0;
-            salvarDados((estado) => {
-                estado.limiteJogosPorAposta = valor;
-            });
-            alert("Limite de jogos por aposta atualizado com sucesso!");
+        async function zerarRanking() {
+            if (!confirm("Tem certeza que deseja zerar os resultados e palpites da rodada?")) return;
+            dadosApp.partidas.forEach(p => { p.resultado = ""; });
+            dadosApp.palpites = {};
+            renderizarTudo();
+            await salvarNuvem();
         }
 
-        function renderizarAdminTorneios() {
-            const container = document.getElementById('lista-admin-torneios');
-            if (!container) return;
-            container.innerHTML = '';
-            if (dadosApp.torneios.length === 0) {
-                container.innerHTML = `<p class="text-[11px] text-slate-500 text-center py-1">Nenhum torneio.</p>`;
-                return;
-            }
-            dadosApp.torneios.forEach(torneio => {
-                const item = document.createElement('div');
-                item.className = "flex justify-between items-center bg-slate-800/60 px-3 py-1.5 rounded-lg border border-slate-700/50 text-xs";
-                item.innerHTML = `
-                    <span class="font-semibold text-white">${torneio}</span>
-                    <div class="flex gap-1">
-                        <button type="button" onclick="editarTorneio('${torneio}')" class="text-amber-400 hover:text-amber-300 text-[11px] font-bold px-2 py-1 rounded transition"><i class="fa-solid fa-pen mr-1"></i> Editar</button>
-                        <button type="button" onclick="removerTorneio('${torneio}')" class="text-red-400 hover:text-red-300 text-[11px] font-bold px-2 py-1 rounded transition"><i class="fa-solid fa-trash mr-1"></i> Apagar</button>
-                    </div>
-                `;
-                container.appendChild(item);
-            });
-        }
-
-        function adicionarTorneio() {
+        async function adicionarTorneio() {
             const input = document.getElementById('input-novo-torneio');
-            const nome = input.value.trim();
-            if (!nome) return alert("Digite o nome do torneio.");
-            if (dadosApp.torneios.includes(nome)) return alert("Este torneio já existe.");
-            input.value = '';
-            salvarDados((estado) => {
-                if (!estado.torneios.includes(nome)) estado.torneios.push(nome);
-            });
+            const nome = input ? input.value.trim() : "";
+            if (!nome) return;
+            if (!dadosApp.torneios.includes(nome)) dadosApp.torneios.push(nome);
+            input.value = "";
+            renderizarAdmin();
+            atualizarRanking();
+            await salvarNuvem();
         }
 
-        function editarTorneio(antigoNome) {
-            const novoNome = prompt(`Editar nome do torneio "${antigoNome}":`, antigoNome);
-            if (!novoNome || !novoNome.trim()) return;
-            const nomeLimpo = novoNome.trim();
-            if (dadosApp.torneios.includes(nomeLimpo)) return alert("Já existe um torneio com esse nome.");
-
-            salvarDados((estado) => {
-                const idx = estado.torneios.indexOf(antigoNome);
-                if (idx !== -1) {
-                    estado.torneios[idx] = nomeLimpo;
-                    estado.partidas.forEach(p => {
-                        if (p.campeonato === antigoNome) p.campeonato = nomeLimpo;
-                    });
-                }
-            });
+        async function removerTorneio(idx) {
+            dadosApp.torneios.splice(idx, 1);
+            if (!dadosApp.torneios.length) dadosApp.torneios = ["Campeonato"];
+            renderizarAdmin();
+            atualizarRanking();
+            await salvarNuvem();
         }
 
-        function removerTorneio(nome) {
-            if (!confirm(`Deseja realmente apagar o torneio "${nome}"?`)) return;
-            salvarDados((estado) => {
-                estado.torneios = estado.torneios.filter(t => t !== nome);
-            });
-        }
+        async function adicionarNovaPartida() {
+            const casa = document.getElementById('novo-time-casa')?.value.trim();
+            const visitante = document.getElementById('novo-time-visitante')?.value.trim();
+            const campeonato = document.getElementById('novo-campeonato')?.value || "Campeonato";
+            const data = document.getElementById('nova-data-jogo')?.value.trim();
 
-        function renderizarAdminPartidas() {
-            const container = document.getElementById('lista-admin-partidas');
-            if (!container) return;
-            container.innerHTML = '';
-            if (dadosApp.partidas.length === 0) {
-                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-2">Nenhuma partida.</p>`;
+            if (!casa || !visitante) {
+                alert("Preencha o time da casa e o visitante.");
                 return;
             }
-            dadosApp.partidas.forEach(p => {
-                const div = document.createElement('div');
-                div.className = "bg-slate-800 border border-slate-700 rounded-xl p-3 flex flex-col gap-2";
-                div.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <span class="text-[10px] text-emerald-400 block font-bold">${p.campeonato}</span>
-                            <span class="text-xs font-semibold text-white">${p.casa} x ${p.visitante}</span>
-                        </div>
-                        <button type="button" onclick="removerPartida(${p.id})" class="text-red-400 text-xs font-bold px-2 py-1"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                    <div class="grid grid-cols-3 gap-1 pt-1">
-                        <button type="button" onclick="salvarResultadoOficial(${p.id}, 'C')" class="py-1.5 text-[10px] rounded-lg ${p.resultadoOficial === 'C' ? 'bg-emerald-600 text-white font-bold' : 'bg-slate-900 text-slate-300'}">Vitória ${p.casa}</button>
-                        <button type="button" onclick="salvarResultadoOficial(${p.id}, 'E')" class="py-1.5 text-[10px] rounded-lg ${p.resultadoOficial === 'E' ? 'bg-amber-600 text-white font-bold' : 'bg-slate-900 text-slate-300'}">Empate</button>
-                        <button type="button" onclick="salvarResultadoOficial(${p.id}, 'V')" class="py-1.5 text-[10px] rounded-lg ${p.resultadoOficial === 'V' ? 'bg-emerald-600 text-white font-bold' : 'bg-slate-900 text-slate-300'}">Vitória ${p.visitante}</button>
-                    </div>
-                `;
-                container.appendChild(div);
+
+            dadosApp.partidas.push({
+                id: "jogo_" + Date.now(),
+                casa,
+                visitante,
+                campeonato,
+                data,
+                resultado: ""
             });
+
+            document.getElementById('novo-time-casa').value = "";
+            document.getElementById('novo-time-visitante').value = "";
+            document.getElementById('nova-data-jogo').value = "";
+
+            renderizarTudo();
+            await salvarNuvem();
         }
 
-        function salvarResultadoOficial(id, resultado) {
-            salvarDados((estado) => {
-                const p = estado.partidas.find(item => item.id === id);
-                if (p) p.resultadoOficial = resultado;
-            });
-        }
+        async function adicionarAmigoComSenha() {
+            const inputNome = document.getElementById('input-novo-amigo');
+            const inputSenha = document.getElementById('input-senha-amigo');
+            const nome = inputNome ? inputNome.value.trim() : "";
+            const senha = inputSenha ? inputSenha.value.trim() : "";
 
-        function zerarRanking() {
-            if (!confirm("Deseja zerar as pontuações e o ranking para iniciar uma nova rodada?")) return;
-            salvarDados((estado) => {
-                estado.partidas.forEach(p => { p.resultadoOficial = null; });
-                Object.keys(estado.palpites).forEach(amigo => {
-                    estado.palpites[amigo] = { jogos: {}, timestamp: null };
-                });
-            });
-            alert("Ranking e palpites zerados na nuvem!");
-        }
-
-        function renderizarAdminAmigos() {
-            const container = document.getElementById('lista-admin-amigos');
-            if (!container) return;
-            container.innerHTML = '';
-            if (dadosApp.amigos.length === 0) {
-                container.innerHTML = `<p class="text-[11px] text-slate-500 text-center py-1">Nenhum participante.</p>`;
+            if (!nome) {
+                alert("Digite o nome do participante.");
                 return;
             }
-            dadosApp.amigos.forEach(amigo => {
-                const senhaCadastrada = dadosApp.senhasUsuarios && dadosApp.senhasUsuarios[amigo] ? dadosApp.senhasUsuarios[amigo] : "Sem senha";
-                const item = document.createElement('div');
-                item.className = "flex justify-between items-center bg-slate-800/60 px-3 py-2 rounded-lg border border-slate-700/50 text-xs";
-                item.innerHTML = `
-                    <div>
-                        <span class="font-semibold text-white block">${amigo}</span>
-                        <span class="text-[10px] text-slate-400">Senha: <strong class="text-emerald-400">${senhaCadastrada}</strong></span>
-                    </div>
-                    <button type="button" onclick="removerAmigo('${amigo}')" class="text-red-400 hover:text-red-300 text-[11px] font-bold px-2 py-1 rounded transition"><i class="fa-solid fa-trash mr-1"></i> Apagar</button>
-                `;
-                container.appendChild(item);
-            });
-        }
 
-        function adicionarAmigoComSenha() {
-            const inpNome = document.getElementById('input-novo-amigo');
-            const inpSenha = document.getElementById('input-senha-amigo');
-            const nome = inpNome.value.trim();
-            const senha = inpSenha.value.trim();
-
-            if (!nome || dadosApp.amigos.includes(nome)) return alert("Nome inválido ou já existe.");
-            if (!senha) return alert("Digite uma senha para este participante.");
-
-            inpNome.value = '';
-            inpSenha.value = '';
-
-            salvarDados((estado) => {
-                validarGarantiaAdmin(estado);
-                if (!estado.amigos.includes(nome)) {
-                    estado.amigos.push(nome);
-                    if (!estado.senhasUsuarios) estado.senhasUsuarios = {};
-                    estado.senhasUsuarios[nome] = senha;
-                    estado.palpites[nome] = { jogos: {}, timestamp: null };
-                }
-            });
-        }
-
-        function removerAmigo(nome) {
-            if (dadosApp.amigos.length <= 1) {
-                return alert("Você não pode apagar o único participante restante do sistema.");
+            if (!dadosApp.amigos.some(a => a.toLowerCase() === nome.toLowerCase())) {
+                dadosApp.amigos.push(nome);
             }
-            if (!confirm(`Deseja realmente apagar o participante ${nome}?`)) return;
-            salvarDados((estado) => {
-                estado.amigos = estado.amigos.filter(a => a !== nome);
-                if (estado.senhasUsuarios) delete estado.senhasUsuarios[nome];
-                delete estado.palpites[nome];
-                validarGarantiaAdmin(estado);
-            });
+            dadosApp.senhasUsuarios[nome] = senha || "1234";
+
+            inputNome.value = "";
+            inputSenha.value = "";
+            popularSelectLoginUsuario();
+            renderizarAdmin();
+            atualizarRanking();
+            await salvarNuvem();
         }
 
-        function adicionarNovaPartida() {
-            const casa = document.getElementById('novo-time-casa').value.trim();
-            const vis = document.getElementById('novo-time-visitante').value.trim();
-            const camp = document.getElementById('novo-campeonato').value;
-            const data = document.getElementById('nova-data-jogo').value.trim() || "Em breve";
-            if (!casa || !vis) return alert("Preencha os dois times.");
-
-            document.getElementById('novo-time-casa').value = '';
-            document.getElementById('novo-time-visitante').value = '';
-            document.getElementById('nova-data-jogo').value = '';
-
-            salvarDados((estado) => {
-                const novoId = estado.partidas.length > 0 ? Math.max(...estado.partidas.map(p => p.id)) + 1 : 1;
-                estado.partidas.push({
-                    id: novoId,
-                    casa: casa,
-                    escudoCasa: obterEscudo(casa),
-                    visitante: vis,
-                    escudoVisitante: obterEscudo(vis),
-                    campeonato: camp,
-                    data: data,
-                    resultadoOficial: null
-                });
-            });
-        }
-
-        function removerPartida(id) {
-            if (!confirm("Remover jogo?")) return;
-            salvarDados((estado) => {
-                estado.partidas = estado.partidas.filter(p => p.id !== id);
-            });
-        }
-
-        function abrirModalImportar() { document.getElementById('modal-importar').classList.remove('hidden'); }
-        function fecharModalImportar() { document.getElementById('modal-importar').classList.add('hidden'); }
-
-        function processarImportacaoWhatsApp() {
-            const txt = document.getElementById('textarea-whatsapp').value;
-            if (!txt.trim()) return;
-            let nome = "Amigo Zap";
-            const mNome = txt.match(/Participante:\s*\*?([^\n\*]+)\*?/i);
-            if (mNome && mNome[1]) nome = mNome[1].trim();
-
-            fecharModalImportar();
-            const agora = new Date();
-            const dataHoraFormatada = agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
-            salvarDados((estado) => {
-                validarGarantiaAdmin(estado);
-                if (!estado.amigos.includes(nome)) estado.amigos.push(nome);
-                if (!estado.palpites[nome]) estado.palpites[nome] = { jogos: {}, timestamp: dataHoraFormatada };
-            });
-        }
-
-        function copiarPix() {
-            navigator.clipboard.writeText(document.getElementById('txt-pix').innerText);
-            alert("Chave Pix copiada!");
+        async function removerAmigo(nome) {
+            if (nome === "Admin") return;
+            dadosApp.amigos = dadosApp.amigos.filter(a => a !== nome);
+            delete dadosApp.senhasUsuarios[nome];
+            delete dadosApp.palpites[nome];
+            popularSelectLoginUsuario();
+            renderizarAdmin();
+            atualizarRanking();
+            await salvarNuvem();
         }
 
         function resetarCacheLocal() {
-            if (!confirm("Limpar o cache deste aparelho e recarregar da nuvem?")) return;
-            localStorage.removeItem('bolao_backup_local');
+            localStorage.removeItem(CACHE_LOCAL_KEY);
             localStorage.removeItem('bolao_usuario_logado');
-            location.reload(true);
+            usuarioLogado = "";
+            dadosApp = validarGarantiaAdmin(DADOS_PADRAO);
+            atualizarInterfaceLogin();
+            renderizarTudo();
+            alert("Cache local limpo!");
         }
 
-        setInterval(() => {
-            const ativo = document.activeElement;
-            const digitando = ativo && (ativo.tagName === 'INPUT' || ativo.tagName === 'TEXTAREA' || ativo.tagName === 'SELECT');
-            if (!digitando && !sincronizandoAgora && JSONBIN_BIN_ID) {
-                carregarDadosNuvem(false);
-            }
-        }, 10000);
+        function abrirModalImportar() {
+            document.getElementById('modal-importar')?.classList.remove('hidden');
+        }
 
-        document.addEventListener("visibilitychange", () => {
-            if (document.visibilityState === "visible") {
-                carregarDadosNuvem(false);
+        function fecharModalImportar() {
+            document.getElementById('modal-importar')?.classList.add('hidden');
+        }
+
+        async function processarImportacaoWhatsApp() {
+            if (!usuarioLogado) {
+                atualizarInterfaceLogin();
+                return;
             }
+            const texto = document.getElementById('textarea-whatsapp')?.value || "";
+            const linhas = texto.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+            if (!linhas.length) {
+                alert("Cole o texto do palpite antes de importar.");
+                return;
+            }
+
+            if (!dadosApp.palpites[usuarioLogado]) {
+                dadosApp.palpites[usuarioLogado] = { escolhas: {}, atualizadoEm: new Date().toISOString() };
+            }
+
+            let importados = 0;
+            dadosApp.partidas.forEach(p => {
+                const linhaMatch = linhas.find(l =>
+                    l.toLowerCase().includes(p.casa.toLowerCase()) &&
+                    l.toLowerCase().includes(p.visitante.toLowerCase())
+                );
+                if (linhaMatch) {
+                    const lower = linhaMatch.toLowerCase();
+                    if (lower.includes("empate")) {
+                        dadosApp.palpites[usuarioLogado].escolhas[p.id] = "empate";
+                        importados++;
+                    } else if (lower.includes(p.casa.toLowerCase() + " vence") || lower.includes("-> " + p.casa.toLowerCase())) {
+                        dadosApp.palpites[usuarioLogado].escolhas[p.id] = "casa";
+                        importados++;
+                    } else if (lower.includes(p.visitante.toLowerCase() + " vence") || lower.includes("-> " + p.visitante.toLowerCase())) {
+                        dadosApp.palpites[usuarioLogado].escolhas[p.id] = "visitante";
+                        importados++;
+                    }
+                }
+            });
+
+            dadosApp.palpites[usuarioLogado].atualizadoEm = new Date().toISOString();
+            fecharModalImportar();
+            renderizarPartidasPalpites();
+            atualizarPote();
+            await salvarNuvem();
+            alert(`${importados} palpite(s) importado(s) para ${usuarioLogado}.`);
+        }
+
+        function gerarComprovanteWhatsApp() {
+            if (!usuarioLogado) {
+                atualizarInterfaceLogin();
+                return;
+            }
+            const escolhas = dadosApp.palpites[usuarioLogado]?.escolhas || {};
+            const itens = dadosApp.partidas.filter(p => escolhas[p.id]).map(p => {
+                const esc = escolhas[p.id];
+                const rotulo = esc === 'casa' ? `${p.casa} vence` : esc === 'visitante' ? `${p.visitante} vence` : "Empate";
+                return `• ${p.casa} x ${p.visitante}: *${rotulo}*`;
+            });
+
+            if (!itens.length) {
+                alert("Selecione pelo menos um palpite antes de enviar.");
+                return;
+            }
+
+            const msg = `🏆 *BOLÃO DOS AMIGOS*\nParticipante: *${usuarioLogado}*\n\n${itens.join('\n')}`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+        }
+
+        function copiarPix() {
+            const pix = document.getElementById('txt-pix')?.textContent?.trim();
+            if (!pix) return;
+            navigator.clipboard?.writeText(pix);
+            alert("Chave Pix copiada!");
+        }
+
+        function renderizarTudo() {
+            dadosApp = validarGarantiaAdmin(dadosApp);
+            popularSelectLoginUsuario();
+            atualizarPote();
+            renderizarPartidasPalpites();
+            atualizarRanking();
+            if (abaAtual === 'ver-palpites') renderizarVerPalpites();
+            if (abaAtual === 'admin') renderizarAdmin();
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            carregarCacheLocal();
+            atualizarInterfaceLogin();
+            renderizarTudo();
+            forcarSincronizacaoNuvem(false);
         });
-
-        carregarDadosNuvem(false);
     </script>
 </body>
 </html>
