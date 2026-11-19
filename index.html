@@ -330,6 +330,30 @@
 
         let usuarioLogado = localStorage.getItem('bolao_usuario_logado') || "";
 
+        const ULTIMA_SYNC_KEY = "bolao_ultima_sync";
+        let ultimaSync = localStorage.getItem(ULTIMA_SYNC_KEY) || "";
+
+        function formatarDataHora(iso) {
+            const d = new Date(iso);
+            if (isNaN(d)) return "";
+            return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        function textoUltimaSync() {
+            return ultimaSync ? formatarDataHora(ultimaSync) : "ainda não sincronizado";
+        }
+
+        function marcarSincronizacao() {
+            ultimaSync = new Date().toISOString();
+            try { localStorage.setItem(ULTIMA_SYNC_KEY, ultimaSync); } catch (e) {}
+        }
+
+        // Segunda confirmação para qualquer exclusão, exibindo a última sincronização com a nuvem
+        function confirmarExclusaoDupla(descricao) {
+            if (!confirm(`Deseja excluir ${descricao}?`)) return false;
+            return confirm(`⚠️ SEGUNDA CONFIRMAÇÃO\n\nVocê está prestes a excluir ${descricao}.\n\nÚltima sincronização com a nuvem: ${textoUltimaSync()}\n\nEsta ação não pode ser desfeita. Confirmar exclusão?`);
+        }
+
         const CORES_TIMES = {
             "flamengo": { fundo: "#b91c1c", faixa: "#0f172a", texto: "#ffffff", sigla: "FLA" },
             "palmeiras": { fundo: "#15803d", faixa: "#ffffff", texto: "#ffffff", sigla: "PAL" },
@@ -356,28 +380,6 @@
             "argentina": { fundo: "#38bdf8", faixa: "#ffffff", texto: "#0f172a", sigla: "ARG" }
         };
 
-        const MAPA_ESCUDOS = {
-            "flamengo": "https://raw.githubusercontent.com/leandro-santos/escudos-futebol-brasileiro/master/serie-a/flamengo.png",
-            "palmeiras": "https://raw.githubusercontent.com/leandro-santos/escudos-futebol-brasileiro/master/serie-a/palmeiras.png",
-            "corinthians": "https://raw.githubusercontent.com/leandro-santos/escudos-futebol-brasileiro/master/serie-a/corinthians.png",
-            "são paulo": "https://raw.githubusercontent.com/leandro-santos/escudos-futebol-brasileiro/master/serie-a/sao-paulo.png",
-            "sao paulo": "https://raw.githubusercontent.com/leandro-santos/escudos-futebol-brasileiro/master/serie-a/sao-paulo.png",
-            "botafogo": "https://raw.githubusercontent.com/leandro-santos/escudos-futebol-brasileiro/master/serie-a/botafogo.png",
-            "fluminense": "https://raw.githubusercontent.com/leandro-santos/escudos-futebol-brasileiro/master/serie-a/fluminense.png",
-            "vasco": "https://raw.githubusercontent.com/leandro-santos/escudos-futebol-brasileiro/master/serie-a/vasco.png",
-            "grêmio": "https://raw.githubusercontent.com/leandro-santos/escudos-futebol-brasileiro/master/serie-a/gremio.png",
-            "gremio": "https://raw.githubusercontent.com/leandro-santos/escudos-futebol-brasileiro/master/serie-a/gremio.png",
-            "internacional": "https://raw.githubusercontent.com/leandro-santos/escudos-futebol-brasileiro/master/serie-a/internacional.png",
-            "fortaleza": "https://raw.githubusercontent.com/leandro-santos/escudos-futebol-brasileiro/master/serie-a/fortaleza.png",
-            "ceará": "https://raw.githubusercontent.com/leandro-santos/escudos-futebol-brasileiro/master/serie-a/ceara.png",
-            "ceara": "https://raw.githubusercontent.com/leandro-santos/escudos-futebol-brasileiro/master/serie-a/ceara.png",
-            "cruzeiro": "https://raw.githubusercontent.com/leandro-santos/escudos-futebol-brasileiro/master/serie-a/cruzeiro.png",
-            "bahia": "https://raw.githubusercontent.com/leandro-santos/escudos-futebol-brasileiro/master/serie-a/bahia.png",
-            "vitória": "https://raw.githubusercontent.com/leandro-santos/escudos-futebol-brasileiro/master/serie-a/vitoria.png",
-            "vitoria": "https://raw.githubusercontent.com/leandro-santos/escudos-futebol-brasileiro/master/serie-a/vitoria.png",
-            "santos": "https://raw.githubusercontent.com/leandro-santos/escudos-futebol-brasileiro/master/serie-a/santos.png"
-        };
-
         function escapeHtml(s) {
             return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         }
@@ -390,11 +392,58 @@
             return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
         }
 
+        // ----- Escudos: busca automática online (TheSportsDB) com cache local -----
+        const ESCUDOS_CACHE_KEY = "bolao_escudos_cache_v1";
+        const ALIAS_TIMES = {
+            "brasil": "Brazil",
+            "são paulo": "Sao Paulo",
+            "grêmio": "Gremio",
+            "ceará": "Ceara",
+            "vitória": "Vitoria",
+            "atlético-mg": "Atletico Mineiro",
+            "atletico-mg": "Atletico Mineiro",
+            "atlético mineiro": "Atletico Mineiro",
+            "athletico-pr": "Athletico Paranaense",
+            "internacional": "Internacional",
+            "fortaleza": "Fortaleza EC"
+        };
+        let escudosCache = {};
+        try { escudosCache = JSON.parse(localStorage.getItem(ESCUDOS_CACHE_KEY) || "{}") || {}; } catch (e) { escudosCache = {}; }
+        const escudosEmBusca = new Set();
+        const escudosFalhos = new Set();
+
         function obterEscudo(nome) {
             if (!nome) return gerarEscudoVetorial("Time");
             const chave = nome.trim().toLowerCase();
-            if (MAPA_ESCUDOS[chave]) return MAPA_ESCUDOS[chave];
-            return gerarEscudoVetorial(nome);
+            if (escudosCache[chave]) return escudosCache[chave];
+            buscarEscudoOnline(nome);          // busca em segundo plano
+            return gerarEscudoVetorial(nome);  // escudo provisório enquanto carrega
+        }
+
+        async function buscarEscudoOnline(nome) {
+            const chave = nome.trim().toLowerCase();
+            if (!chave || escudosCache[chave] || escudosEmBusca.has(chave) || escudosFalhos.has(chave)) return;
+            escudosEmBusca.add(chave);
+            try {
+                const termo = ALIAS_TIMES[chave] || nome.trim();
+                const resp = await fetch(`https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${encodeURIComponent(termo)}`);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const json = await resp.json();
+                const times = ((json && json.teams) || []).filter(t => t.strSport === 'Soccer');
+                const escolhido = times.find(t => t.strCountry === 'Brazil') || times[0];
+                const url = escolhido && (escolhido.strBadge || escolhido.strTeamBadge);
+                if (url) {
+                    escudosCache[chave] = url;
+                    try { localStorage.setItem(ESCUDOS_CACHE_KEY, JSON.stringify(escudosCache)); } catch (e) {}
+                    renderizarPartidasPalpites();
+                } else {
+                    escudosFalhos.add(chave);
+                }
+            } catch (e) {
+                escudosFalhos.add(chave);
+            } finally {
+                escudosEmBusca.delete(chave);
+            }
         }
 
         const DADOS_PADRAO = {
@@ -547,7 +596,7 @@
 
             if (estado === 'online') {
                 dot.className = "w-2 h-2 rounded-full bg-emerald-400";
-                label.textContent = texto || "Sincronizado na nuvem";
+                label.textContent = (texto || "Sincronizado na nuvem") + (ultimaSync ? " • " + formatarDataHora(ultimaSync) : "");
                 label.className = "text-[10px] text-emerald-400 font-medium";
             } else if (estado === 'sync') {
                 dot.className = "w-2 h-2 rounded-full bg-amber-400 animate-ping";
@@ -604,6 +653,7 @@
                 });
                 if (!resp.ok) throw new Error(await detalheErroHttp(resp));
                 localStorage.removeItem(PENDENTE_KEY);
+                marcarSincronizacao();
                 atualizarIndicadorStatus('online', 'Sincronizado na nuvem');
                 return true;
             } catch (err) {
@@ -629,7 +679,8 @@
                 if (remoto && typeof remoto === 'object') {
                     dadosApp = validarGarantiaAdmin(remoto);
                     salvarCacheLocal();
-                    atualizarIndicadorStatus('online', 'Sincronizado na nuvem');
+                    marcarSincronizacao();
+                atualizarIndicadorStatus('online', 'Sincronizado na nuvem');
                     // Reavalia o login: a lista de participantes pode ter mudado
                     atualizarInterfaceLogin();
                     renderizarTudo();
@@ -667,6 +718,7 @@
             const infoQtd = document.getElementById('info-qtd-amigos');
             const infoPote = document.getElementById('info-pote');
             const participantesComPalpite = Object.keys(dadosApp.palpites || {}).filter(nome => {
+                if (nome === "Admin") return false;
                 const p = dadosApp.palpites[nome];
                 return p && p.escolhas && Object.keys(p.escolhas).length > 0;
             });
@@ -699,14 +751,14 @@
                         </div>
                         <div class="grid grid-cols-3 gap-2 text-xs">
                             <button type="button" onclick="registrarPalpite('${partida.id}', 'casa')" class="p-2.5 rounded-xl border transition flex flex-col items-center gap-1 ${btnClass('casa')}">
-                                <img src="${obterEscudo(partida.casa)}" alt="${escapeHtml(partida.casa)}" class="w-6 h-6 object-contain">
+                                <img src="${obterEscudo(partida.casa)}" alt="${escapeHtml(partida.casa)}" data-time="${escapeHtml(partida.casa)}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src=gerarEscudoVetorial(this.dataset.time)" class="w-8 h-8 object-contain">
                                 <span class="truncate max-w-full">${escapeHtml(partida.casa)}</span>
                             </button>
                             <button type="button" onclick="registrarPalpite('${partida.id}', 'empate')" class="p-2.5 rounded-xl border transition flex flex-col items-center justify-center ${btnClass('empate')}">
                                 <span>Empate</span>
                             </button>
                             <button type="button" onclick="registrarPalpite('${partida.id}', 'visitante')" class="p-2.5 rounded-xl border transition flex flex-col items-center gap-1 ${btnClass('visitante')}">
-                                <img src="${obterEscudo(partida.visitante)}" alt="${escapeHtml(partida.visitante)}" class="w-6 h-6 object-contain">
+                                <img src="${obterEscudo(partida.visitante)}" alt="${escapeHtml(partida.visitante)}" data-time="${escapeHtml(partida.visitante)}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src=gerarEscudoVetorial(this.dataset.time)" class="w-8 h-8 object-contain">
                                 <span class="truncate max-w-full">${escapeHtml(partida.visitante)}</span>
                             </button>
                         </div>
@@ -769,7 +821,7 @@
             const select = document.getElementById('select-ver-amigo');
             if (select) {
                 const anterior = select.value;
-                select.innerHTML = dadosApp.amigos.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
+                select.innerHTML = dadosApp.amigos.filter(a => a !== "Admin").map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
                 if (anterior && dadosApp.amigos.includes(anterior)) {
                     select.value = anterior;
                 }
@@ -784,6 +836,11 @@
             if (!select || !lista) return;
 
             const amigo = select.value;
+            if (!amigo) {
+                if (infoHora) infoHora.textContent = "Nenhum participante cadastrado.";
+                lista.innerHTML = `<p class="text-xs text-slate-400">Sem participantes.</p>`;
+                return;
+            }
             const registro = dadosApp.palpites[amigo];
             if (!registro || !registro.escolhas || !Object.keys(registro.escolhas).length) {
                 if (infoHora) infoHora.textContent = `Nenhum palpite registrado para ${amigo}.`;
@@ -811,7 +868,7 @@
             const select = document.getElementById('select-ver-amigo');
             if (!select || !select.value) return;
             const amigo = select.value;
-            if (!confirm(`Excluir todos os palpites de ${amigo}?`)) return;
+            if (!confirmarExclusaoDupla(`todos os palpites de "${amigo}"`)) return;
             delete dadosApp.palpites[amigo];
             renderizarVerPalpitesAmigo();
             atualizarPote();
@@ -832,7 +889,7 @@
             }
 
             const partidasConsideradas = dadosApp.partidas.filter(p => compFiltro === 'todos' || p.campeonato === compFiltro);
-            const linhas = dadosApp.amigos.map(nome => {
+            const linhas = dadosApp.amigos.filter(nome => nome !== "Admin").map(nome => {
                 const escolhas = dadosApp.palpites[nome]?.escolhas || {};
                 let jogos = 0;
                 let acertos = 0;
@@ -953,13 +1010,16 @@
         }
 
         async function removerPartida(partidaId) {
+            const alvo = dadosApp.partidas.find(item => item.id === partidaId);
+            if (!alvo) return;
+            if (!confirmarExclusaoDupla(`a partida "${alvo.casa} x ${alvo.visitante}"`)) return;
             dadosApp.partidas = dadosApp.partidas.filter(item => item.id !== partidaId);
             renderizarTudo();
             await salvarNuvem();
         }
 
         async function zerarRanking() {
-            if (!confirm("Tem certeza que deseja zerar os resultados e palpites da rodada?")) return;
+            if (!confirmarExclusaoDupla("TODOS os resultados e palpites da rodada (zerar ranking)")) return;
             dadosApp.partidas.forEach(p => { p.resultado = ""; });
             dadosApp.palpites = {};
             renderizarTudo();
@@ -978,6 +1038,9 @@
         }
 
         async function removerTorneio(idx) {
+            const nomeTorneio = dadosApp.torneios[idx];
+            if (nomeTorneio === undefined) return;
+            if (!confirmarExclusaoDupla(`o torneio "${nomeTorneio}"`)) return;
             dadosApp.torneios.splice(idx, 1);
             if (!dadosApp.torneios.length) dadosApp.torneios = ["Campeonato"];
             renderizarAdmin();
@@ -1040,6 +1103,7 @@
         async function removerAmigoPorIndice(idx) {
             const nome = dadosApp.amigos[idx];
             if (!nome || nome === "Admin") return;
+            if (!confirmarExclusaoDupla(`o participante "${nome}" (com senha e palpites)`)) return;
             dadosApp.amigos = dadosApp.amigos.filter(a => a !== nome);
             delete dadosApp.senhasUsuarios[nome];
             delete dadosApp.palpites[nome];
@@ -1050,6 +1114,7 @@
         }
 
         function resetarCacheLocal() {
+            if (!confirmarExclusaoDupla("o cache local deste aparelho")) return;
             localStorage.removeItem(CACHE_LOCAL_KEY);
             localStorage.removeItem(PENDENTE_KEY);
             localStorage.removeItem('bolao_usuario_logado');
@@ -1167,5 +1232,6 @@
     </script>
 </body>
 </html>
+
 
 
